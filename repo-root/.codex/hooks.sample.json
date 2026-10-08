@@ -1,0 +1,17 @@
+{
+  "description": "Agentic-orchestrator audit hooks. Rename to hooks.json, then review and trust via /hooks in Codex (hooks only run after trust; project hooks only in trusted projects).",
+  "hooks": {
+    "SessionStart": [
+      { "hooks": [ { "type": "command", "command": "python3 hooks/claude_event.py", "timeout": 30 } ] }
+    ],
+    "SubagentStart": [
+      { "hooks": [ { "type": "command", "command": "python3 hooks/claude_event.py", "timeout": 30 } ] }
+    ],
+    "SubagentStop": [
+      { "hooks": [ { "type": "command", "command": "python3 hooks/claude_event.py", "timeout": 30 } ] }
+    ],
+    "Stop": [
+      { "hooks": [ { "type": "command", "command": "python3 hooks/claude_event.py", "timeout": 30 } ] }
+    ]
+  }
+}

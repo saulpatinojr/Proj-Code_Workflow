@@ -1,0 +1,8 @@
+# Placeholder registry. The installer (or `python tooling/workflow.py registry`)
+# regenerates this file from the agents actually installed across ALL ecosystems:
+# .claude/agents (*.md), .github/agents + ~/.copilot/agents (*.agent.md),
+# .codex/agents (*.toml). agent_name must equal the installed agent's own name
+# exactly -- never hand-add an agent that is not installed.
+version: 1
+agents:
+  []

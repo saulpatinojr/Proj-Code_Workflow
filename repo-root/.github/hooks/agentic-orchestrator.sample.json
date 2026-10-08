@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [ { "type": "command", "bash": "python3 hooks/claude_event.py", "powershell": "python hooks/claude_event.py", "timeoutSec": 30 } ],
+    "subagentStart": [ { "type": "command", "bash": "python3 hooks/claude_event.py", "powershell": "python hooks/claude_event.py", "timeoutSec": 30 } ],
+    "subagentStop": [ { "type": "command", "bash": "python3 hooks/claude_event.py", "powershell": "python hooks/claude_event.py", "timeoutSec": 30 } ],
+    "agentStop": [ { "type": "command", "bash": "python3 hooks/claude_event.py", "powershell": "python hooks/claude_event.py", "timeoutSec": 30 } ]
+  }
+}
