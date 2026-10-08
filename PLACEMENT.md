@@ -1,12 +1,14 @@
-# Where everything goes, and why — three clients, two platforms
+# Code Workflow: where everything goes, and why (three clients, two platforms)
 
 One pack, three clients (Claude Code, OpenAI Codex CLI, GitHub Copilot), two platforms (Windows, macOS/Linux). The payload folders **mirror their destinations**, so drag-and-drop is a straight copy. The installers do the copying, verifying, and merging — `install.ps1` on Windows, `install.sh` on macOS/Linux — and both let you pick which clients to install. Formats re-verified against official client docs 2026-10-08.
 
 ```text
-claude-agentic-orchestrator-v3.1\
+Proj-Code_Workflow\  (repository root = the pack)
 ├── install.ps1          <- Windows installer (interactive, client picker)
 ├── install.sh           <- macOS / Linux installer (interactive, client picker)
 ├── PLACEMENT.md         <- this file
+├── README.md / CHANGELOG.md / LICENSE
+├── tests\  .github\       <- repository CI only; never installed
 │
 ├── user-claude\         ==> ~/.claude\                (Claude Code: agent + 6 skills)
 │   ├── agents\claude-agentic-orchestrator.md
@@ -24,8 +26,10 @@ claude-agentic-orchestrator-v3.1\
     ├── .github\hooks\agentic-orchestrator.sample.json <- Copilot CLI hooks; rename after review
     ├── AGENTS-orchestrator.md                         <- appended into AGENTS.md (marker-guarded)
     ├── hooks\claude_event.py                          <- one hook script for all three clients
-    └── tooling\workflow.py + agent-registry.yml
+    └── tooling\workflow.py + agent-registry.yml   (+ optional gates.json you add)
 ```
+
+Created at runtime in your repository (not shipped): `.agentic\` with workflow records, gate evidence logs, the redacted audit log, and its own `.gitignore`. `workflows\` is committable evidence; `audit\`, `discovery.json`, and `active-workflow.json` stay machine-local.
 
 ## Two kinds of adapters
 
@@ -76,6 +80,32 @@ The Claude hook merge is exact and tested. Codex and Copilot-CLI hooks ship as `
    - **Claude Code**: new session from repo root -> `@agent-claude-agentic-orchestrator` in the prompt, or `claude --agent claude-agentic-orchestrator`
    - **Codex CLI**: `codex`, then ask for the orchestrator agent; subagents spawn when you ask it to delegate
    - **Copilot CLI**: `copilot --agent claude-agentic-orchestrator`; **VS Code**: pick the agent in the chat agent dropdown
+
+## Workflow commands
+
+All commands run from inside the repository. Use `python3` on macOS/Linux and `python` on Windows.
+
+| Command | What it does |
+|---|---|
+| `workflow.py registry` | Regenerate the registry from installed agents across all three ecosystems |
+| `workflow.py discover` | Show which registry agents are installed, where, and for which clients |
+| `workflow.py init --mode one\|selected\|all --objective "..." [--risk R0-R4] [--acceptance "a; b"] [--require-gates] [--enforce-stop]` | Create the workflow record before delegating |
+| `workflow.py gates --workflow <id>` | Run deterministic checks (Terraform, Ansible, npm, pytest, or custom `tooling/gates.json`); output logged with sha256 |
+| `workflow.py validate --workflow <id> [--check]` | Validate handoffs, evidence paths and hashes, and gates |
+| `workflow.py export --workflow <id>` | Write `run-manifest.json` in Code Conductor's `RunManifest` shape; bring it under Code Conductor review with `cc import` |
+| `workflow.py doctor` | Check install health: clients, skills, hooks, registry freshness, gitignore |
+
+Custom gates go in `tooling/gates.json`, for example: `{"disable": ["node"], "profiles": {"bicep": {"detect": {"any_suffix": [".bicep"]}, "gates": [{"id": "bicep-build", "command": ["az", "bicep", "build", "--file", "main.bicep"]}]}}}`. A missing tool is recorded as `skipped`, never silently passed. With `--require-gates`, a skipped blocking gate blocks validation.
+
+## Uninstall
+
+Remove `claude-agentic-orchestrator.*` from `~/.claude/agents`, `~/.codex/agents`, and `~/.copilot/agents`, and the six skill folders from `~/.claude/skills` and `~/.agents/skills`. In the repository:
+
+- delete `tooling\` and `hooks\`;
+- remove the four `claude_event.py` entries from `.claude/settings.json`; a pre-merge backup is in `settings.json.backup-orchestrator`;
+- delete the marked `BEGIN/END claude-agentic-orchestrator` block from `AGENTS.md`.
+
+`.agentic\` holds your workflow evidence, so keep or delete it deliberately.
 
 ## Two rules that prevent every path problem
 

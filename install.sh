@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Claude Agentic Orchestrator - interactive installer (macOS / Linux)
+# Code Workflow - interactive installer (macOS / Linux)
 # Clients: Claude Code, OpenAI Codex CLI, GitHub Copilot (pick any combination).
 # Safe to re-run: identical files skip, hook merge and AGENTS.md append are idempotent.
 set -eo pipefail  # no -u: macOS ships bash 3.2, where empty-array expansion trips nounset
@@ -36,7 +36,7 @@ copy_tree() { # copy_tree SRC DST
 }
 
 printf '\n%s=============================================================%s\n' "$CYAN" "$NC"
-printf '%s  Claude Agentic Orchestrator - interactive installer%s\n' "$CYAN" "$NC"
+printf '%s  Code Workflow - interactive installer%s\n' "$CYAN" "$NC"
 printf '%s=============================================================%s\n' "$CYAN" "$NC"
 printf '  Read PLACEMENT.md for the full map of what goes where.\n'
 
@@ -259,6 +259,9 @@ PYPICK
   "$PY" tooling/workflow.py init --mode "$MODE" ${AGENTS_ARG[@]+"${AGENTS_ARG[@]}"} --objective "$OBJ" ${ENF[@]+"${ENF[@]}"}
   note 'Validate later with: '"$PY"' tooling/workflow.py validate --workflow <workflow-id>'
 fi
+
+note 'Doctor checks the install: clients, skills, hooks, registry freshness, gitignore.'
+confirm '    Run now: workflow.py doctor ?' y && "$PY" tooling/workflow.py doctor || true
 
 printf '\n%s=============================================================%s\n' "$GREEN" "$NC"
 printf '%s  Install complete.%s\n' "$GREEN" "$NC"

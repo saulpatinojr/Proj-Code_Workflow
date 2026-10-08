@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Agent-client lifecycle hook: local audit records plus an opt-in Stop completion guard.
+"""Code Workflow lifecycle hook: redacted local audit records plus an opt-in Stop completion guard.
 
 Works with Claude Code, Codex CLI, and GitHub Copilot hook payloads (all send JSON
 on stdin with a cwd field; the event name is read from --event or the payload).
@@ -21,6 +21,30 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+
+
+# Only these payload keys are written to the audit log. Prompts, transcripts, assistant
+# messages, and tool input/output are never stored: audit records must be safe to keep
+# on disk and must not capture secrets that passed through the session.
+AUDIT_ALLOWED_KEYS = (
+    "hook_event_name", "hookEventName", "event", "session_id", "sessionId", "cwd",
+    "agent_id", "agentId", "agent_type", "agentType", "agent_name", "source", "matcher",
+    "stop_hook_active", "permission_mode", "model", "raw_input_invalid",
+)
+
+
+def redact(event: dict) -> dict:
+    kept = {key: event[key] for key in AUDIT_ALLOWED_KEYS if key in event}
+    dropped = sorted(key for key in event if key not in AUDIT_ALLOWED_KEYS)
+    if dropped:
+        kept["dropped_keys"] = dropped
+    return kept
+
+
+def ensure_gitignore(agentic: Path) -> None:
+    ignore = agentic / ".gitignore"
+    if not ignore.exists():
+        ignore.write_text("audit/\ndiscovery.json\nactive-workflow.json\n", encoding="utf-8")
 
 
 def resolve_root(event: dict) -> Path:
@@ -46,7 +70,7 @@ def main() -> int:
     try:
         event = json.loads(raw) if raw.strip() else {}
     except json.JSONDecodeError:
-        event = {"raw_input_invalid": True, "raw_input": raw[:1000]}
+        event = {"raw_input_invalid": True}
     if not args.event:
         args.event = str(event.get("hook_event_name") or event.get("hookEventName") or event.get("event") or "unknown")
     aliases = {"sessionstart": "SessionStart", "sessionend": "SessionEnd", "subagentstart": "SubagentStart",
@@ -56,7 +80,8 @@ def main() -> int:
     try:
         audit = root / ".agentic" / "audit"
         audit.mkdir(parents=True, exist_ok=True)
-        record = {"recorded_at": datetime.now(timezone.utc).isoformat(), "event_argument": args.event, "event": event}
+        ensure_gitignore(audit.parent)
+        record = {"recorded_at": datetime.now(timezone.utc).isoformat(), "event_argument": args.event, "event": redact(event)}
         with (audit / "claude-events.jsonl").open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(record, sort_keys=True) + "\n")
     except OSError:

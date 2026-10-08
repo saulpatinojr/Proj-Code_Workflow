@@ -30,6 +30,14 @@ not_verified:
   - Live deployment was not performed.
 ```
 
-The handoff is invalid when `agent_id` does not match the registered node, a required field is missing, an artifact path is outside the repository, or the status claims completion without evidence or an explicit not-verified statement where appropriate.
+The handoff is invalid when:
+
+- `agent_id` does not match the registered node;
+- a required field is missing;
+- an evidence or artifact path is absolute or escapes the repository;
+- the status is not one of the allowed values;
+- the status is `completed` but none of the cited evidence or artifact files exists.
+
+Validation records a sha256 for every cited file that exists, so evidence cannot be silently swapped after the fact. Use `not_verified` to state honestly what was not checked; `workflow.py export` carries it into Code Conductor's `AgentResult.notVerified`.
 
 The parent orchestrator may summarize a handoff, but it must not rewrite a subagent's evidence to make an incomplete result appear complete.

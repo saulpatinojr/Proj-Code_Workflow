@@ -1,7 +1,7 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-  Interactive installer for the Claude Agentic Orchestrator pack (Windows).
+  Interactive installer for Code Workflow (Windows).
 .DESCRIPTION
   Clients: Claude Code, OpenAI Codex CLI, GitHub Copilot (pick any combination).
   Two modes, chosen automatically:
@@ -124,7 +124,7 @@ $ExpectedSkills = @(
 
 Write-Host ''
 Write-Host '=============================================================' -ForegroundColor Cyan
-Write-Host '  Claude Agentic Orchestrator - interactive installer'        -ForegroundColor Cyan
+Write-Host '  Code Workflow - interactive installer'                      -ForegroundColor Cyan
 Write-Host '=============================================================' -ForegroundColor Cyan
 Write-Host '  Read PLACEMENT.md for the full map of what goes where.'
 
@@ -388,6 +388,11 @@ try {
         Write-Host ''
         Write-Host '    Validate later with:' -ForegroundColor Gray
         Write-Host '      python tooling\workflow.py validate --workflow <workflow-id>' -ForegroundColor Gray
+    }
+    Write-Host ''
+    Write-Host '    Doctor checks the install: clients, skills, hooks, registry freshness, gitignore.' -ForegroundColor Gray
+    if (Confirm-YesNo '    Run now: workflow.py doctor ?' $true) {
+        & cmd /c "$python tooling\workflow.py doctor"
     }
 } finally { Pop-Location }
 
