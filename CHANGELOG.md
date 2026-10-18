@@ -21,12 +21,18 @@ Pre-alpha rebrand as **Code Workflow**, the slim, in-client sibling of Code Cond
 - `--version`; workflow ids are validated to prevent path traversal.
 - A stdlib `unittest` suite covering lifecycle, gates, evidence, export contract, hook redaction, the stop guard, doctor, product-boundary guards, and pack integrity. CI runs on Windows, macOS, and Linux.
 - README, CHANGELOG, LICENSE, and an uninstall section in PLACEMENT.md.
+- `orchestration/generate.py`: generates each client's orchestration in the user profile from templates. The first template is Claude Code: the orchestrator `agentic-orchestrator-anthropic-claude-code` (listing the specialists installed in Claude Code), six client-neutral workflow skills, a short rule, and hook configuration that is written but not turned on. The controller and hook are installed once in `~/.code-workflow/`. The generator is deterministic, records every file it writes with its sha256, never overwrites a file it did not write or that was changed since, and replaces the earlier installer's files only with `--replace-legacy`, after a backup. See `orchestration/README.md`.
+- `discover --client` and `init --client`: an orchestrator counts only the agents its own client can run; the client is recorded in `WORKFLOW.json`.
 
 ### Changed
 
 - The audit hook now records only allowlisted event fields: prompts, transcripts, assistant messages, and tool input/output are dropped. It creates `.agentic/.gitignore` so audit logs stay out of git.
 - The handoff parser now reads the full contract (lists of mappings, `not_verified`) instead of line regexes, and status values are validated.
 - The installers are rebranded and offer `doctor` at the end of the guided run.
+- Agent discovery follows `CLAUDE_CONFIG_DIR`, `COPILOT_HOME` and `CODEX_HOME`, and treats every `agentic-orchestrator-*` agent, like the earlier `claude-agentic-orchestrator`, as an orchestrator rather than a specialist.
+- Custom gates come from the repository's own `tooling/gates.json` first, so a controller installed once in the profile still runs each repository's checks.
+- The Stop guard also finds the controller beside the hook's own pack home, and its message names the controller's real path.
+- The two Claude-named skills are client-neutral in the generated orchestration: `subagent-delegation` and `workflow-hooks-and-guardrails`.
 
 ### Fixed
 

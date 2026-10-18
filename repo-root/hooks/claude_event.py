@@ -102,8 +102,10 @@ def main() -> int:
         return finish(args.event)
     if not state.get("enforce_stop", False) or state.get("status") == "completed":
         return finish(args.event)
-    validator = root / "tooling" / "workflow.py"
-    if not validator.is_file():
+    # The controller is either copied into the repository or installed once in the pack home beside this hook.
+    candidates = (root / "tooling" / "workflow.py", Path(__file__).resolve().parents[1] / "tooling" / "workflow.py")
+    validator = next((path for path in candidates if path.is_file()), None)
+    if validator is None:
         return finish(args.event)  # fail open: a mislocated install must never trap the session
     try:
         result = subprocess.run(
@@ -116,7 +118,7 @@ def main() -> int:
     return finish(args.event, {
         "decision": "block",
         "reason": (f"Workflow {workflow_id} is not complete. Validate required subagent handoffs "
-                   f"(python tooling/workflow.py validate --workflow {workflow_id}) or mark the "
+                   f"(python \"{validator.as_posix()}\" validate --workflow {workflow_id}) or mark the "
                    f"workflow appropriately before ending the session."),
     })
 

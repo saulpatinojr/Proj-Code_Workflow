@@ -144,6 +144,62 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(sorted(agents["azure-architect"]["clients"]), ["claude-code", "github-copilot"])
         self.assertEqual(agents["cost-analyzer"]["clients"], ["codex"])
 
+    def test_client_filter_counts_only_agents_that_client_can_run(self):
+        sb = self.sb
+        discovery = json.loads(sb.wf("discover", "--client", "claude-code").stdout)
+        available = {a["id"]: a["available"] for a in discovery["agents"]}
+        self.assertEqual(available, {"azure-architect": True, "terraform-expert-engineer": True,
+                                     "pr-reviewer": False, "cost-analyzer": False})
+        self.assertEqual(discovery["client"], "claude-code")
+        sb.wf("init", "--client", "codex", "--mode", "selected", "--agents", "cost-analyzer,azure-architect",
+              "--workflow-id", "wf-c", "--objective", "t")
+        state = json.loads((sb.repo / ".agentic/workflows/wf-c/WORKFLOW.json").read_text(encoding="utf-8"))
+        self.assertEqual(state["client"], "codex")
+        self.assertEqual({n["id"]: n["status"] for n in state["nodes"]},
+                         {"cost-analyzer": "queued", "azure-architect": "blocked"})
+
+    def test_generated_orchestrators_are_never_registered_as_specialists(self):
+        sb = self.sb
+        sb.write(".claude/agents/new-orch.md",
+                 "---\nname: agentic-orchestrator-anthropic-claude-code\ndescription: orchestrator\n---\n", base=sb.home)
+        sb.write(".codex/agents/orch.toml", 'name = "agentic-orchestrator-openai-codex"\ndescription = "o"\n', base=sb.home)
+        self.assertEqual(sb.wf("registry").returncode, 0)
+        ids = {a["id"] for a in json.loads(sb.wf("discover").stdout)["agents"]}
+        self.assertFalse(any(i.startswith("agentic-orchestrator-") for i in ids), ids)
+
+    def test_user_agent_folders_follow_the_client_variables(self):
+        sb = self.sb
+        moved = sb.base / "claude-elsewhere"
+        sb.write("agents/moved.md", "---\nname: moved-agent\ndescription: m\n---\n", base=moved)
+        env = sb.env()
+        env["CLAUDE_CONFIG_DIR"] = str(moved)
+        run = subprocess.run([sys.executable, str(sb.repo / "tooling" / "workflow.py"), "--root", str(sb.repo),
+                              "registry"], env=env, capture_output=True, text=True)
+        self.assertEqual(run.returncode, 0, run.stderr)
+        registry = (sb.repo / "tooling" / "agent-registry.yml").read_text(encoding="utf-8")
+        self.assertIn("agent_name: moved-agent", registry)
+        self.assertNotIn("agent_name: terraform-expert-engineer", registry)
+
+    def test_repository_gates_file_wins_over_the_one_beside_the_controller(self):
+        sb = self.sb
+        pack = sb.base / "pack"
+        shutil.copytree(sb.repo / "tooling", pack / "tooling")
+        shutil.rmtree(sb.repo / "tooling")
+        (pack / "tooling" / "gates.json").write_text(json.dumps({"profiles": {"pack-only": {
+            "detect": {"any_file": ["main.tf"]}, "gates": [{"id": "pack-gate", "command": ["definitely-not-a-tool"]}]}}}),
+            encoding="utf-8")
+        sb.write("tooling/gates.json", json.dumps({"profiles": {"repo-only": {
+            "detect": {"any_file": ["main.tf"]}, "gates": [{"id": "repo-gate", "command": ["definitely-not-a-tool"]}]}}}))
+
+        def pack_wf(*args):
+            return subprocess.run([sys.executable, str(pack / "tooling" / "workflow.py"), "--root", str(sb.repo), *args],
+                                  cwd=sb.repo, env=sb.env(), capture_output=True, text=True)
+        self.assertEqual(pack_wf("registry").returncode, 0)
+        pack_wf("init", "--mode", "selected", "--agents", "azure-architect", "--workflow-id", "wf-g", "--objective", "t")
+        results = json.loads(pack_wf("gates", "--workflow", "wf-g").stdout)["results"]
+        self.assertIn("repo-gate", [r["gate"] for r in results])
+        self.assertNotIn("pack-gate", [r["gate"] for r in results])
+
     def test_lifecycle_blocks_then_completes_with_hashed_evidence(self):
         sb = self.sb
         sb.wf("init", "--mode", "selected", "--agents", "azure-architect", "--workflow-id", "wf-a", "--objective", "t")
@@ -349,6 +405,20 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(blocked.get("decision"), "block")
         shutil.move(str(sb.repo / "tooling"), str(sb.base / "tooling-aside"))
         self.assertEqual(json.loads(sb.hook({"cwd": str(sb.repo)}, "--event", "Stop").stdout), {})
+
+    def test_stop_guard_uses_the_controller_installed_in_the_pack_home(self):
+        sb = self.sb
+        sb.wf("init", "--mode", "selected", "--agents", "azure-architect", "--workflow-id", "wf-p",
+              "--objective", "t", "--enforce-stop")
+        pack = sb.base / "pack"
+        shutil.move(str(sb.repo / "tooling"), str(pack / "tooling"))
+        shutil.move(str(sb.repo / "hooks"), str(pack / "hooks"))
+        proc = subprocess.run([sys.executable, str(pack / "hooks" / "claude_event.py"), "--event", "Stop"],
+                              input=json.dumps({"cwd": str(sb.repo)}), cwd=sb.repo, env=sb.env(),
+                              capture_output=True, text=True)
+        decision = json.loads(proc.stdout)
+        self.assertEqual(decision.get("decision"), "block")
+        self.assertIn((pack / "tooling" / "workflow.py").as_posix(), decision["reason"])
 
     def test_doctor_reports_install_health(self):
         sb = self.sb

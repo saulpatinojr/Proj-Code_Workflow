@@ -7,8 +7,9 @@ providers, manages worktrees, or issues merge/readiness decisions; that is Code
 Conductor's job. See README.md "Boundaries".
 
 Path model (two anchors, never confused):
-  PACK_HOME   = the directory this script lives in (tooling/). The agent registry and
-                optional gates.json live beside the script and always resolve here.
+  PACK_HOME   = the directory this script lives in (tooling/). The agent registry lives
+                beside the script and always resolves here. Custom gates come from the
+                repository's tooling/gates.json, else from a gates.json beside the script.
   PROJECT_DIR = the repository the workflow runs in. Resolved in order:
                 --root flag > CLAUDE_PROJECT_DIR env > git toplevel > cwd.
                 All runtime state (.agentic/) is created under PROJECT_DIR.
@@ -17,7 +18,9 @@ Agent-pack adapters: discovery scans every installed agent ecosystem --
   claude-code    : <repo>/.claude/agents and ~/.claude/agents   (*.md, frontmatter name)
   github-copilot : <repo>/.github/agents and ~/.copilot/agents  (*.agent.md / *.md)
   codex          : <repo>/.codex/agents and ~/.codex/agents     (*.toml, name = "...")
+The user folders follow CLAUDE_CONFIG_DIR, COPILOT_HOME and CODEX_HOME when they are set.
 Same agent name found in several ecosystems = one registry entry, all paths kept.
+`discover --client` and `init --client` count only the agents that one client can run.
 
 Commands:
   registry   regenerate tooling/agent-registry.yml from installed agents
@@ -46,16 +49,21 @@ VERSION = "0.1.0"
 PACK_HOME = Path(__file__).resolve().parent
 REGISTRY = PACK_HOME / "agent-registry.yml"
 GATES_CONFIG = PACK_HOME / "gates.json"
-ORCHESTRATOR_NAME = "claude-agentic-orchestrator"
+LEGACY_ORCHESTRATOR = "claude-agentic-orchestrator"
+ORCHESTRATOR_PREFIX = "agentic-orchestrator-"
 RISK_CLASSES = ("R0", "R1", "R2", "R3", "R4")
-EXPECTED_SKILLS = (
-    "agentic-workflow-dispatch",
-    "agent-registry-and-capability-discovery",
-    "handoff-contract-and-state",
-    "claude-subagent-delegation",
-    "claude-hooks-and-guardrails",
-    "workflow-evidence-and-recovery",
+# The skills the generated orchestration installs, and the set the per-repository installer used to install.
+SKILL_SETS = (
+    ("agentic-workflow-dispatch", "agent-registry-and-capability-discovery", "handoff-contract-and-state",
+     "subagent-delegation", "workflow-hooks-and-guardrails", "workflow-evidence-and-recovery"),
+    ("agentic-workflow-dispatch", "agent-registry-and-capability-discovery", "handoff-contract-and-state",
+     "claude-subagent-delegation", "claude-hooks-and-guardrails", "workflow-evidence-and-recovery"),
 )
+
+
+def is_orchestrator(name: str) -> bool:
+    """Orchestrators coordinate; they are never registered as specialists."""
+    return name == LEGACY_ORCHESTRATOR or name.startswith(ORCHESTRATOR_PREFIX)
 AGENTIC_GITIGNORE = (
     "# Code Workflow runtime state. Workflow records (workflows/) are committable evidence;\n"
     "# audit logs, discovery caches, and the active pointer are machine-local.\n"
@@ -216,11 +224,17 @@ def _scan_codex(location: Path):
 
 
 ECOSYSTEMS = [
-    # (client id, repo-relative dir, user-scope dir, scanner)
-    ("claude-code",    ".claude/agents", ".claude/agents",  _scan_claude),
-    ("github-copilot", ".github/agents", ".copilot/agents", _scan_copilot),
-    ("codex",          ".codex/agents",  ".codex/agents",   _scan_codex),
+    # (client id, repo-relative dir, variable that moves the user folder, default user folder, scanner)
+    ("claude-code",    ".claude/agents", "CLAUDE_CONFIG_DIR", ".claude",  _scan_claude),
+    ("github-copilot", ".github/agents", "COPILOT_HOME",      ".copilot", _scan_copilot),
+    ("codex",          ".codex/agents",  "CODEX_HOME",        ".codex",   _scan_codex),
 ]
+CLIENT_IDS = tuple(client for client, *_ in ECOSYSTEMS)
+
+
+def user_agents_dir(env_var: str, default: str) -> Path:
+    moved = os.environ.get(env_var)
+    return (Path(moved) if moved else Path.home() / default) / "agents"
 
 # Maps a client ecosystem to Code Conductor's provider/harness identifiers for export.
 CLIENT_IDENTITY = {
@@ -233,17 +247,17 @@ CLIENT_IDENTITY = {
 def installed_agents(root: Path, include_user: bool) -> dict[str, dict]:
     """Map agent name -> {paths, description, clients} across every ecosystem."""
     found: dict[str, dict] = {}
-    for client, repo_rel, user_rel, scan in ECOSYSTEMS:
+    for client, repo_rel, env_var, default, scan in ECOSYSTEMS:
         locations = [root / repo_rel]
         if include_user:
-            user = Path.home() / user_rel
+            user = user_agents_dir(env_var, default)
             if user.resolve() != locations[0].resolve():
                 locations.append(user)
         for location in locations:
             if not location.is_dir():
                 continue
             for name, description, path in scan(location):
-                if name == ORCHESTRATOR_NAME:
+                if is_orchestrator(name):
                     continue
                 entry = found.setdefault(name, {"paths": [], "description": "", "clients": []})
                 entry["paths"].append(str(path))
@@ -316,7 +330,9 @@ def write_registry(root: Path, include_user: bool) -> int:
     return 0
 
 
-def discover(root: Path, include_user: bool) -> dict:
+def discover(root: Path, include_user: bool, client: str | None = None) -> dict:
+    """With a client, an agent is available only when that client carries it: an orchestrator can
+    delegate only to agents installed in its own client."""
     found = installed_agents(root, include_user)
     registry_items = parse_registry()
     registry_names = {item["agent_name"] for item in registry_items}
@@ -327,17 +343,20 @@ def discover(root: Path, include_user: bool) -> dict:
             "id": item["id"],
             "agent_name": item["agent_name"],
             "capability": item.get("capability", ""),
-            "available": bool(entry["paths"]),
+            "available": bool(entry["paths"]) and (client is None or client in entry["clients"]),
             "paths": entry["paths"],
             "clients": entry["clients"],
             "enabled_by_default": item.get("enabled_by_default", "false").lower() == "true",
         })
     unknown = sorted(n for n in found if n not in registry_names)
-    return {"generated_at": now(), "root": str(root), "agents": records, "unknown_agents": unknown}
+    result = {"generated_at": now(), "root": str(root), "agents": records, "unknown_agents": unknown}
+    if client:
+        result["client"] = client
+    return result
 
 
-def run_discovery(root: Path, include_user: bool, out: str) -> dict:
-    result = discover(root, include_user)
+def run_discovery(root: Path, include_user: bool, out: str, client: str | None = None) -> dict:
+    result = discover(root, include_user, client)
     ensure_agentic_dir(root)
     output = root / out
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -382,7 +401,7 @@ def init_workflow(args: argparse.Namespace, root: Path) -> int:
     directory = root / ".agentic" / "workflows" / workflow_id
     if directory.exists():
         raise SystemExit(f"workflow already exists: {workflow_id}")
-    discovery = run_discovery(root, include_user=not args.no_user, out=".agentic/discovery.json")
+    discovery = run_discovery(root, include_user=not args.no_user, out=".agentic/discovery.json", client=args.client)
     nodes = selected_nodes(discovery, args.mode, [x for x in args.agents.split(",") if x])
     optional = {x for x in args.optional_agents.split(",") if x}
     for node in nodes:
@@ -400,6 +419,7 @@ def init_workflow(args: argparse.Namespace, root: Path) -> int:
         "created_at": now(),
         "updated_at": now(),
         "mode": args.mode,
+        "client": args.client,
         "objective": args.objective,
         "risk": args.risk,
         "acceptance_criteria": [x.strip() for x in args.acceptance.split(";") if x.strip()],
@@ -597,10 +617,18 @@ BUILTIN_GATE_PROFILES: dict[str, dict] = {
 }
 
 
-def load_gate_profiles() -> dict[str, dict]:
+def gates_config(root: Path) -> Path:
+    """A repository's own tooling/gates.json wins, so a controller installed once in the profile
+    still runs each repository's checks; otherwise the file beside the controller applies."""
+    own = root / "tooling" / "gates.json"
+    return own if own.is_file() else GATES_CONFIG
+
+
+def load_gate_profiles(root: Path) -> dict[str, dict]:
     profiles = {name: dict(profile) for name, profile in BUILTIN_GATE_PROFILES.items()}
-    if GATES_CONFIG.is_file():
-        custom = json.loads(GATES_CONFIG.read_text(encoding="utf-8"))
+    config = gates_config(root)
+    if config.is_file():
+        custom = json.loads(config.read_text(encoding="utf-8"))
         for name in custom.get("disable", []):
             profiles.pop(name, None)
         profiles.update(custom.get("profiles", {}))
@@ -653,7 +681,7 @@ def _skip_reason(root: Path, gate: dict) -> str | None:
 
 def run_gates(args: argparse.Namespace, root: Path) -> int:
     state_path, state = load_state(root, args.workflow)
-    profiles = load_gate_profiles()
+    profiles = load_gate_profiles(root)
     selected = [p for p in args.profiles.split(",") if p] or detect_gate_profiles(root, profiles)
     evidence_dir = state_path.parent / "evidence"
     evidence_dir.mkdir(exist_ok=True)
@@ -873,7 +901,7 @@ def _has_orchestrator(dirs, scanner) -> bool:
     for directory in dirs:
         if directory.is_dir():
             for name, _description, _path in scanner(directory):
-                if name == ORCHESTRATOR_NAME:
+                if is_orchestrator(name):
                     return True
     return False
 
@@ -889,19 +917,17 @@ def doctor(args: argparse.Namespace, root: Path) -> int:
     for rel in ("tooling/workflow.py", "hooks/claude_event.py"):
         add("OK" if (root / rel).is_file() else "ERROR", f"repo file {rel}")
     home = Path.home()
-    clients = {
-        "claude-code": _has_orchestrator((home / ".claude/agents", root / ".claude/agents"), _scan_claude),
-        "codex": _has_orchestrator((home / ".codex/agents", root / ".codex/agents"), _scan_codex),
-        "github-copilot": _has_orchestrator((home / ".copilot/agents", root / ".github/agents"), _scan_copilot),
-    }
+    clients = {client: _has_orchestrator((user_agents_dir(env_var, default), root / repo_rel), scan)
+               for client, repo_rel, env_var, default, scan in ECOSYSTEMS}
     for client, present in clients.items():
         add("OK" if present else "INFO", f"orchestrator agent for {client}: {'installed' if present else 'not installed'}")
     if not any(clients.values()):
         add("ERROR", "the orchestrator agent is not installed for any client (run install.ps1 / install.sh)")
     for label, base in (("~/.claude/skills", home / ".claude/skills"), ("~/.agents/skills", home / ".agents/skills")):
-        missing = [s for s in EXPECTED_SKILLS if not (base / s / "SKILL.md").is_file()]
+        gaps = [[s for s in skills if not (base / s / "SKILL.md").is_file()] for skills in SKILL_SETS]
+        missing = min(gaps, key=len)
         if base.is_dir() and not missing:
-            add("OK", f"all {len(EXPECTED_SKILLS)} skills in {label}")
+            add("OK", f"all {len(SKILL_SETS[0])} skills in {label}")
         elif base.is_dir():
             add("WARN", f"{label} missing skills: {', '.join(missing)}")
         else:
@@ -950,7 +976,11 @@ def main() -> int:
     discover_parser = sub.add_parser("discover")
     discover_parser.add_argument("--out", default=".agentic/discovery.json")
     discover_parser.add_argument("--no-user", action="store_true")
+    discover_parser.add_argument("--client", choices=CLIENT_IDS,
+                                 help="count only the agents this client can run (an orchestrator passes its own client)")
     init_parser = sub.add_parser("init")
+    init_parser.add_argument("--client", choices=CLIENT_IDS,
+                             help="select only agents this client can run; others are unavailable to the workflow")
     init_parser.add_argument("--mode", choices=["one", "selected", "all"], required=True)
     init_parser.add_argument("--agents", default="")
     init_parser.add_argument("--optional-agents", default="")
@@ -981,7 +1011,7 @@ def main() -> int:
     if args.command == "registry":
         return write_registry(root, include_user=not args.no_user)
     if args.command == "discover":
-        print(json.dumps(run_discovery(root, include_user=not args.no_user, out=args.out), indent=2))
+        print(json.dumps(run_discovery(root, include_user=not args.no_user, out=args.out, client=args.client), indent=2))
         return 0
     if args.command == "init":
         return init_workflow(args, root)
