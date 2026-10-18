@@ -79,6 +79,26 @@ This file records where each targeted AI client reads **user-level** configurati
 | Gemini CLI | Extension folder under `~/.gemini/extensions/<name>/` with `gemini-extension.json`, installed with `gemini extensions install <path or GitHub URL>` | Agents, skills, commands, hooks, GEMINI.md, MCP servers. Extension agents and skills rank below user-level ones. |
 | Copilot CLI and VS Code | `~/.copilot/installed-plugins/`, Agent Plugins 1.0 format | Agents, skills, MCP, hooks. VS Code finds CLI-installed plugins only when `chat.plugins.enabled` is on, default off. |
 
+## APM (Agent Package Manager, Microsoft)
+
+Verified 2026-10-18 against microsoft.github.io/apm and the installed CLI 0.33.0.
+
+- **Manifest.** `apm.yml` requires only `name` and `version`. Optional: `description`, `author`, `license` (SPDX), `homepage`, `repository`, `keywords`, `targets` (list of copilot, claude, codex, gemini, kiro, cursor, opencode, windsurf, antigravity, agent-skills, grok-build, hermes; `vscode` is a deprecated alias for copilot), `scripts`, `includes`, `dependencies` (`apm`, `mcp`, `lsp`), `devDependencies`, `compilation`, `policy`, `registries`, `marketplace`. There is no top-level `source`, `agents`, or `skills` field; those names exist only inside `marketplace.packages[]` and per-dependency objects. Unknown fields are not an error, but they do nothing.
+- **Layout.** `.apm/` is the source root. Primitives: `.apm/instructions/*.instructions.md` (frontmatter `description`, `applyTo`), `.apm/prompts/*.prompt.md`, `.apm/agents/*.agent.md` (frontmatter `name`, `description`, optional `model`, `tools`, `color`, `handoffs`), `.apm/skills/<name>/SKILL.md` (`name` equals the folder), `.apm/hooks/*.json`, and MCP servers declared in `apm.yml`. Commands ship as prompts.
+- **Deployment per target (project scope).** Agents go to `.github/agents/*.agent.md`, `.claude/agents/*.md`, `.codex/agents/*.toml`, `.kiro/agents/*.md`; Gemini gets no agents. Skills go to `.agents/skills/` for Copilot, Codex, Gemini, and agent-skills, `.claude/skills/` for Claude, `.kiro/skills/` for Kiro. Instructions become `.github/instructions/`, `.claude/rules/`, `.kiro/steering/`, and are folded into `AGENTS.md` for Codex and `GEMINI.md` for Gemini. Hooks go to `.github/hooks/`, merged `.claude/settings.json`, `.codex/hooks.json`, `.kiro/hooks/`, merged `.gemini/settings.json`.
+- **User scope (`apm install -g`).** Full for Claude Code. Copilot: prompts and instructions only; agents and hooks stay project scope. Codex: agents, skills, hooks, MCP; no instructions or prompts. So a user-wide install of Copilot agents must be done by our installer, not APM.
+- **One repo, many packs.** A dependency may point at a sub-folder: `apm install owner/repo/path/to/pack`, or the object form with `git`, `path`, `ref`.
+- **Validation.** `apm install` rejects malformed YAML and blocks on critical hidden-Unicode findings. `apm compile --validate` checks every primitive's frontmatter. `apm audit --ci` checks lockfile, deployed files, drift, orphaned packages, and content integrity. There is no `apm lint` and no `apm validate`.
+- **"Official" packages.** APM has no approval or badge concept. Distribution is a `marketplace:` block in `apm.yml`, built with `apm pack`, registered by consumers with `apm marketplace add`. Organisations restrict allowed marketplaces by policy and trust packages with `apm approve`. `apm publish` to a registry is experimental.
+
+## GitHub Copilot code review (on GitHub.com)
+
+Verified 2026-10-18 against docs.github.com.
+
+- Reads, from the pull request's head branch: `.github/copilot-instructions.md`, path-specific `.github/instructions/**/*.instructions.md` (frontmatter `applyTo`; `excludeAgent: "code-review"` opts a file out), agent instruction files `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `REVIEW.md`, agent skills in `.github/skills`, and organisation-level instructions.
+- Custom agents in `.github/agents` do not influence code review. No user-profile file applies; personal instructions apply only to Copilot CLI.
+- Keep any single instruction file under about 1,000 lines. Priority: personal, then repository, then organisation.
+
 ## Where the current pack disagrees with this file
 
 1. Hooks are merged into each repository's `.claude/settings.json`. User-level hooks belong in the files listed above.
@@ -100,6 +120,8 @@ This file records where each targeted AI client reads **user-level** configurati
 - Claude Code: code.claude.com/docs/en/sub-agents, /skills, /hooks, /memory, /settings, /claude-directory, /plugins/install, /plugins/manifest-reference, /changelog
 - Codex CLI: learn.chatgpt.com/docs/agent-configuration/subagents, /agent-configuration/agents-md, /build-skills, /hooks, /config-file/environment-variables, /windows/windows-app; developers.openai.com/plugins/build/plugins; github.com/openai/codex releases
 - GitHub Copilot CLI: docs.github.com/en/copilot/reference/copilot-cli-reference/cli-command-reference, /cli-config-dir-reference, /cli-plugin-reference, /reference/hooks-reference, /how-tos/copilot-cli/customize-copilot/add-custom-instructions; github.com/github/copilot-cli changelog
+- APM: microsoft.github.io/apm reference pages manifest-schema, targets-matrix, package-anatomy, cli/install, cli/compile, cli/pack, cli/audit
+- Copilot code review: docs.github.com/en/copilot/reference/custom-instructions-support, /how-tos/use-copilot-agents/use-code-review, /tutorials/customize-code-review
 - Kiro: kiro.dev/docs/custom-agents, /steering, /skills, /hooks, /mcp/configuration, /configuration, kiro.dev/changelog
 - Gemini CLI: geminicli.com/docs/core/subagents, /cli/skills, /cli/gemini-md, /extensions/reference, /hooks, /reference/configuration, /changelogs/latest
 - VS Code: code.visualstudio.com/docs/agent-customization/custom-agents, /agent-skills, /custom-instructions, /hooks, /agent-plugins; code.visualstudio.com/docs/agents/reference/ai-settings
