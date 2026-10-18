@@ -222,7 +222,7 @@ Proven by restructuring the Python Distinguished Engineer pack and installing it
 
 ### Version 2 (2026-10-18)
 
-Driven by the review of the Python Distinguished Engineer pack 2.0.0 (`pack-review-python-distinguished-engineer.md`) and by vendor documentation verified the same day (`client-locations.md`).
+Driven by a review of the Python Distinguished Engineer pack 2.0.0, whose findings are folded into this prompt (the review file itself was removed), and by vendor documentation verified the same day (`client-locations.md`).
 
 - Section 2: `apm.yml` limited to fields APM defines; `instructions`, `prompts`, and native `hooks` moved under `.apm/`; hand-built `targets/<vendor>/` trees removed in favour of generation at install time; archives declared build outputs; catalog no longer embeds file contents; no stale files.
 - Section 5: user-scope installation made a hard requirement; repository-root dependencies forbidden; verified field names and tool identifiers per vendor; Kiro added; self-contradicting permissions called out.

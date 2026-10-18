@@ -16,6 +16,8 @@ This file records where each targeted AI client reads **user-level** configurati
 | VS Code with GitHub Copilot | Docs dated 2026-10-14 (VS Code 1.142) | 1.142.0 |
 | Kiro (AWS) | IDE 1.3.11 (2026-10-15), CLI 2.31.1 (2026-10-14); CLI 3.0 due end of October 2026 | Not installed |
 | Gemini CLI | v0.64.0 (2026-10-13). Unpaid and Google One users were moved to Antigravity CLI on 2026-06-18 | Not installed |
+| Google Antigravity (App, IDE, CLI) | Docs at antigravity.google/docs as of 2026-10-18 | Not checked |
+| GitHub Copilot app (desktop, preview) | Docs at docs.github.com as of 2026-10-18 | Not checked |
 
 ## Agents
 
@@ -104,6 +106,23 @@ Verified 2026-10-18 against microsoft.github.io/apm and the installed CLI 0.33.0
 - **Validation.** `apm install` rejects malformed YAML and blocks on critical hidden-Unicode findings. `apm compile --validate` checks every primitive's frontmatter. `apm audit --ci` checks lockfile, deployed files, drift, orphaned packages, and content integrity. There is no `apm lint` and no `apm validate`.
 - **"Official" packages.** APM has no approval or badge concept. Distribution is a `marketplace:` block in `apm.yml`, built with `apm pack`, registered by consumers with `apm marketplace add`. Organisations restrict allowed marketplaces by policy and trust packages with `apm approve`. `apm publish` to a registry is experimental.
 
+## Google Antigravity and the GitHub Copilot app
+
+Verified 2026-10-18 against antigravity.google/docs (rules, skills) and docs.github.com (Customizing the GitHub Copilot app). Neither uses the `.claude` or `.codex` folders: Antigravity reads `~/.gemini/` and a workspace's `.agents/`, and the Copilot app reuses what Copilot CLI reads.
+
+| | Antigravity App and IDE | Antigravity CLI | GitHub Copilot app |
+|---|---|---|---|
+| Global skills | `~/.gemini/config/skills/<name>/`; the IDE also reads the legacy `~/.gemini/antigravity/skills/` | `~/.gemini/antigravity-cli/skills/<name>/` | "Any skills configured for your repositories or Copilot CLI" (`~/.copilot/skills`, `~/.agents/skills`) |
+| Workspace skills | `<workspace>/.agents/skills/<name>/` | same | repository skills |
+| Global rules | `~/.gemini/AGENTS.md`, `~/.gemini/GEMINI.md`, or `~/.gemini/config/rules/*.md` | the same, plus `~/.gemini/antigravity-cli/rules/*.md` | "App instructions", edited in the app; no file location is documented |
+| Workspace rules | `AGENTS.md`, `GEMINI.md`, `.agents/rules/*.md` (legacy `.agent/rules/`) in the workspace or any subfolder | same | per-repository instructions edited in the app |
+| Custom agents | not documented on these pages | not documented on these pages | chosen with the agent picker or `/agent`; documented as custom agents of Copilot cloud agent |
+| MCP servers | not covered here | plugins under `~/.gemini/antigravity-cli/plugins/<name>/` | the same MCP servers as Copilot CLI |
+
+- Every file in a `rules/` folder needs YAML frontmatter with `trigger: always_on | model_decision | glob | manual`; `model_decision` also needs `description`, and `glob` needs `globs`. `AGENTS.md` and `GEMINI.md` take no frontmatter and are always on.
+- Antigravity truncates a rule file over 24,000 bytes, and all active global and always-on rules share a 20,000-token budget.
+- APM 0.33.0 lists `antigravity` as a target; what it generates there is not yet observed.
+
 ## GitHub Copilot code review (on GitHub.com)
 
 Verified 2026-10-18 against docs.github.com.
@@ -123,6 +142,8 @@ Verified 2026-10-18 against docs.github.com.
 
 ## Still to verify by hand
 
+- Whether Antigravity also reads `~/.agents/skills`, and where it defines custom agents, subagents and hooks.
+- Whether the GitHub Copilot app reads `~/.copilot/agents` and `~/.copilot/instructions`, which Copilot CLI uses.
 - Whether user-level Claude Code hooks receive `CLAUDE_PROJECT_DIR`, and whether `~` expands in a hook command.
 - Whether VS Code Copilot-harness sessions read `~/.copilot/agents` with default settings.
 - Which shell runs Codex hook commands on native Windows.
@@ -138,4 +159,6 @@ Verified 2026-10-18 against docs.github.com.
 - Copilot code review: docs.github.com/en/copilot/reference/custom-instructions-support, /how-tos/use-copilot-agents/use-code-review, /tutorials/customize-code-review
 - Kiro: kiro.dev/docs/custom-agents, /steering, /skills, /hooks, /mcp/configuration, /configuration, kiro.dev/changelog
 - Gemini CLI: geminicli.com/docs/core/subagents, /cli/skills, /cli/gemini-md, /extensions/reference, /hooks, /reference/configuration, /changelogs/latest
+- Google Antigravity: antigravity.google/docs/rules, /skills
+- GitHub Copilot app: docs.github.com/en/copilot/how-tos/github-copilot-app/customize-github-copilot-app
 - VS Code: code.visualstudio.com/docs/agent-customization/custom-agents, /agent-skills, /custom-instructions, /hooks, /agent-plugins; code.visualstudio.com/docs/agents/reference/ai-settings
