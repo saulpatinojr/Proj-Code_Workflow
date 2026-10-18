@@ -44,6 +44,9 @@ Install agent packs once, into the user profile, so every repository opened in V
 
 - 2026-10-18: `saulpatinojr/Proj-Agent_Packs` created (private). The Python Distinguished Engineer pack was restructured to prompt v2.1, validated (120 checks, APM install into a scratch project for six targets), and pushed. The other two packs remain at prompt v1. Working copy for editing: `Workspace\Proj-Agent_Packs`. The OneDrive folder still holds the old full copy and will become the needed-files-only folder once the installer exists.
 
+- 2026-10-18, later: shared tooling in Proj-Agent_Packs (`tooling/validate_pack.py`, `build_pack.py`, `restructure_pack.py`, `skill_coverage.py`). Fifteen packs converted to prompt v2.3 and pushed; every one passes validation with an APM install for six targets. Six source folders (Google Cloud, CloudFlare, FinOps, Notion, Cloud Cybersecurity, Docker) are third-party skill collections and need generation, not conversion.
+- IDE model: VS Code is the front end for Claude Code, Codex and GitHub Copilot. Kiro and Antigravity are alternative IDEs; verifying packs in them is the next step after the installer.
+
 ## Decisions still needed
 
 - Whether regeneration of a failing pack may replace the source automatically, or always waits for approval of the diff (current design: waits).
