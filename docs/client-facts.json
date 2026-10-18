@@ -23,6 +23,10 @@
     {"id": "gemini-user-agents", "client": "Gemini CLI", "fact": "User subagents in ~/.gemini/agents", "url": "https://geminicli.com/docs/core/subagents", "phrase": "~/.gemini/agents/"},
     {"id": "gemini-user-context", "client": "Gemini CLI", "fact": "Global context file ~/.gemini/GEMINI.md", "url": "https://geminicli.com/docs/cli/gemini-md", "phrase": "~/.gemini/GEMINI.md"},
     {"id": "apm-kiro-tools", "client": "APM", "fact": "APM refuses a Kiro agent whose tools are outside Kiro's capability tags", "url": "https://microsoft.github.io/apm/reference/targets-matrix/", "phrase": "fails closed"},
-    {"id": "actions-free-public", "client": "GitHub Actions", "fact": "Actions minutes are free for public repositories on standard runners", "url": "https://docs.github.com/en/billing/concepts/product-billing/github-actions", "phrase": "free for self-hosted runners and for public repositories"}
+    {"id": "actions-free-public", "client": "GitHub Actions", "fact": "Actions minutes are free for public repositories on standard runners", "url": "https://docs.github.com/en/billing/concepts/product-billing/github-actions", "phrase": "free for self-hosted runners and for public repositories"},
+    {"id": "antigravity-global-rules", "client": "Google Antigravity", "fact": "Global modular rules live in ~/.gemini/config/rules", "url": "https://antigravity.google/docs/rules", "phrase": "~/.gemini/config/rules/*.md"},
+    {"id": "antigravity-workspace-rules", "client": "Google Antigravity", "fact": "Workspace rules live in .agents/rules", "url": "https://antigravity.google/docs/rules", "phrase": ".agents/rules/*.md"},
+    {"id": "antigravity-global-skills", "client": "Google Antigravity", "fact": "Global skills live in ~/.gemini/config/skills", "url": "https://antigravity.google/docs/skills", "phrase": "~/.gemini/config/skills/"},
+    {"id": "copilot-app-skills", "client": "GitHub Copilot app", "fact": "The Copilot app uses the skills configured for Copilot CLI and repositories", "url": "https://docs.github.com/en/copilot/how-tos/github-copilot-app/customize-github-copilot-app", "phrase": "Any skills configured for your repositories or Copilot CLI are automatically available in the GitHub Copilot app"}
   ]
 }
