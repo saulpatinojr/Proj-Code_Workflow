@@ -69,7 +69,7 @@ Agreed 2026-10-18: the answers to the nine questions asked before step 5, and de
 
 - **Packs:** 20 in `Proj-Agent_Packs`, all passing validation with an APM install for six targets. Five were generated from third-party skill collections (Notion, CloudFlare, Docker, Google Cloud, FinOps); 13 had their missing examples, templates and prompts filled; two were restructured. The Cloud Cybersecurity collection is parked (issue #22).
 - **Shared primitives:** the draw.io skills shared by the AWS, Azure and Google Cloud packs, and the evaluation agent, four skills, security instruction and two prompts shared by the Python and TypeScript packs.
-- **Code Workflow 0.1.0, pre-alpha:** controller, hooks, and an orchestrator agent for Claude Code, Codex and Copilot, installed per repository. The user-profile installer (v2) is not built yet.
+- **Code Workflow 0.1.0, pre-alpha:** controller, hooks, and an orchestrator agent for Claude Code, Codex and Copilot, installed per repository by the old installers. `orchestration/generate.py` now writes Claude Code's orchestration into the user profile, with the controller installed once in `~/.code-workflow/`. The local setup script that also pulls the packs is not built yet.
 - **Engine:** `Proj-Agent_Packs/tooling/generate_pack.py` generates and gap-fills packs headlessly and publishes them as pull requests.
 
 ## Plan
@@ -80,7 +80,7 @@ Agreed 2026-10-18: the answers to the nine questions asked before step 5, and de
 | 2 | Generation engine and the remaining packs | Done |
 | 3 | Bind workflow completion to the reviewed content and the gates' results | Done, pull request #1; moving state into the pack home remains |
 | 4 | Remove the remaining prompt-name collisions with qualified names | Done, Proj-Agent_Packs pull request #23; CI now fails on any install collision |
-| 5 | **Orchestration templates, one per client:** how the orchestrator, handoffs, workflows, hooks, agents and skills are expressed in each client's own files, and a template that generates them from the selected packs | In progress: decisions agreed, client locations re-verified; VS Code templates first |
+| 5 | **Orchestration templates, one per client:** how the orchestrator, handoffs, workflows, hooks, agents and skills are expressed in each client's own files, and a template that generates them from the selected packs | In progress: the generator and the Claude Code template are built and verified end to end in the real client; Codex, then Copilot with the VS Code helper extension, next |
 | 6 | Local setup: a script pulls the selected packs into the client locations and runs the generator (current success threshold) | After step 5 |
 | 7 | APM pulls the packs and a minimal engine generates the orchestration (100%) | After step 6 |
 | 8 | Verify Kiro and Antigravity, and the Copilot app, in the real clients | With steps 5 and 6; all of them are installed on the reference machine |
@@ -94,6 +94,7 @@ Agreed 2026-10-18: the answers to the nine questions asked before step 5, and de
 - 2026-10-18: shared primitives for cloud diagrams and for Python and TypeScript; the Codex orchestrator moved out of the packs; client list extended to Antigravity, Kiro and the Copilot app, with their locations verified where documented.
 - 2026-10-18: Code Workflow binds completion to reviewed evidence and fresh gates (pull request #1); prompt-name collisions removed in Proj-Agent_Packs (pull request #23).
 - 2026-10-18: orchestration decisions agreed; every client's current locations re-verified against official documentation.
+- 2026-10-18: orchestration generator and the Claude Code template. Generated into the real profile, replacing the old installer's files after a backup, then a one-agent workflow ran end to end in Claude Code: delegation, handoff, gates, `validate` completed.
 
 ## Decisions still needed
 

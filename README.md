@@ -49,6 +49,10 @@ cc import .agentic/workflows/<id>/run-manifest.json     # Code Conductor: brings
 
 [`PLACEMENT.md`](PLACEMENT.md) maps every file to its destination, lists every command, and explains how to uninstall.
 
+## Install into the user profile (in progress)
+
+`orchestration/generate.py` is replacing the per-repository installers. It installs the controller once in `~/.code-workflow/` and generates each client's orchestrator, skills and rule in the user profile, so every repository can use them. Claude Code is built; the other clients follow. See [`orchestration/README.md`](orchestration/README.md).
+
 ## How a workflow runs
 
 1. `workflow.py init` creates `.agentic/workflows/<id>/` **before** any delegation.
