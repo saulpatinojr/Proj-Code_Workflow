@@ -7,6 +7,7 @@ import json
 import os
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -110,7 +111,14 @@ class Sandbox:
         return self.write(f".agentic/workflows/{workflow_id}/handoffs/{agent_id}.yml", text)
 
     def cleanup(self):
-        shutil.rmtree(self.base, ignore_errors=True)
+        def unlock_and_retry(func, path, *_):
+            # git writes its object files read-only, which shutil.rmtree cannot delete on Windows
+            os.chmod(path, stat.S_IWRITE)
+            func(path)
+        if sys.version_info >= (3, 12):
+            shutil.rmtree(self.base, onexc=unlock_and_retry)
+        else:
+            shutil.rmtree(self.base, onerror=unlock_and_retry)
 
 
 class WorkflowTests(unittest.TestCase):
