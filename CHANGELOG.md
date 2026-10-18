@@ -1,8 +1,8 @@
 # Changelog
 
-## 1.0.0 (2026-10-08)
+## 0.1.0 (unreleased, pre-alpha)
 
-First release as **Code Workflow**, the slim, in-client sibling of Code Conductor. Previously distributed as the "claude-agentic-orchestrator" pack (v1 to v3.1).
+Pre-alpha rebrand as **Code Workflow**, the slim, in-client sibling of Code Conductor. Previously distributed as the "claude-agentic-orchestrator" pack (v1 to v3.1).
 
 ### Added
 
@@ -23,6 +23,14 @@ First release as **Code Workflow**, the slim, in-client sibling of Code Conducto
 - The audit hook now records only allowlisted event fields: prompts, transcripts, assistant messages, and tool input/output are dropped. It creates `.agentic/.gitignore` so audit logs stay out of git.
 - The handoff parser now reads the full contract (lists of mappings, `not_verified`) instead of line regexes, and status values are validated.
 - The installers are rebranded and offer `doctor` at the end of the guided run.
+
+### Fixed
+
+- The registry reads agent descriptions that wrap over several lines in the file header, and trims long ones at a word boundary instead of mid-word.
+- `install.ps1` writes `settings.json` without a byte-order mark. Both installers leave `settings.json` untouched when every hook entry is already present.
+- Both installers keep the first `settings.json.backup-orchestrator`, so a re-run no longer replaces the backup of your original settings.
+- A re-run no longer offers to overwrite the generated `tooling/agent-registry.yml`.
+- `doctor` says when hooks or the AGENTS.md section are absent, instead of printing the "present" wording at INFO level.
 
 ### Carried forward from 3.1 (re-verified against client docs 2026-10-08)
 

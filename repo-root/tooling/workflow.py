@@ -42,7 +42,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-VERSION = "1.0.0"
+VERSION = "0.1.0"
 PACK_HOME = Path(__file__).resolve().parent
 REGISTRY = PACK_HOME / "agent-registry.yml"
 GATES_CONFIG = PACK_HOME / "gates.json"
@@ -104,8 +104,16 @@ def ensure_agentic_dir(root: Path) -> Path:
     return agentic
 
 
+BLOCK_SCALAR_INDICATORS = (">", "|", ">-", "|-", ">+", "|+")
+
+
 def frontmatter(path: Path) -> dict[str, str]:
-    """Simple key: value pairs from a markdown frontmatter block."""
+    """Scalar key: value pairs from a markdown frontmatter block.
+
+    Handles one-line values, plain values continued on indented lines, and > or |
+    block scalars, so a description wrapped over several lines is read in full.
+    Keys whose value is a list or mapping are ignored.
+    """
     try:
         text = path.read_text(encoding="utf-8", errors="replace")
     except OSError:
@@ -114,10 +122,34 @@ def frontmatter(path: Path) -> dict[str, str]:
     if not match:
         return {}
     fields: dict[str, str] = {}
+    key: str | None = None
+    block: str | None = None
+    parts: list[str] = []
+
+    def flush() -> None:
+        if key is None:
+            return
+        if block == "|":
+            fields[key] = "\n".join(parts).strip()
+        else:
+            value = " ".join(p for p in parts if p).strip()
+            fields[key] = value if block else value.strip("\"'")
+
     for line in match.group(1).splitlines():
-        m = re.match(r"^([A-Za-z_][\w-]*):\s*(.+?)\s*$", line)
-        if m and not m.group(2).startswith("#"):
-            fields[m.group(1)] = m.group(2).split(" #", 1)[0].strip().strip("\"'")
+        if key is not None and (line[:1] in (" ", "\t") or not line.strip()):
+            parts.append(line.strip())
+            continue
+        flush()
+        key, block, parts = None, None, []
+        m = re.match(r"^([A-Za-z_][\w-]*):\s*(.*?)\s*$", line)
+        if not m or m.group(2).startswith("#"):
+            continue
+        value = m.group(2).split(" #", 1)[0].strip()
+        if value in BLOCK_SCALAR_INDICATORS:
+            key, block = m.group(1), value[0]
+        elif value:
+            key, parts = m.group(1), [value]
+    flush()
     return fields
 
 
@@ -215,6 +247,18 @@ def parse_registry(path: Path = REGISTRY) -> list[dict[str, str]]:
     return items
 
 
+CAPABILITY_LIMIT = 240
+
+
+def capability_text(description: str, fallback: str, limit: int = CAPABILITY_LIMIT) -> str:
+    """One-line capability summary: whitespace collapsed, quotes made YAML-safe, trimmed at a word."""
+    text = " ".join((description or fallback).split()).replace('"', "'")
+    if len(text) <= limit:
+        return text
+    cut = text[: limit + 1].rsplit(" ", 1)[0][:limit].rstrip(",;:- ")
+    return cut + "..."
+
+
 def write_registry(root: Path, include_user: bool) -> int:
     found = installed_agents(root, include_user)
     names = sorted(found)
@@ -227,11 +271,11 @@ def write_registry(root: Path, include_user: bool) -> int:
         "agents:",
     ]
     for name in names:
-        capability = (found[name]["description"] or name).replace('"', "'")
+        capability = capability_text(found[name]["description"], name)
         lines += [
             f"  - id: {name}",
             f"    agent_name: {name}",
-            f'    capability: "{capability[:160]}"',
+            f'    capability: "{capability}"',
             f"    clients: \"{','.join(found[name]['clients'])}\"",
             "    enabled_by_default: true",
         ]
@@ -780,12 +824,19 @@ def doctor(args: argparse.Namespace, root: Path) -> int:
             add("INFO", f"{label} not present")
     settings = root / ".claude" / "settings.json"
     merged = settings.is_file() and "claude_event.py" in settings.read_text(encoding="utf-8", errors="replace")
-    add("OK" if merged else "INFO", "Claude hook entries merged into .claude/settings.json")
-    add("OK" if (root / ".codex" / "hooks.json").is_file() else "INFO",
-        ".codex/hooks.json active (rename hooks.sample.json after review, then trust via /hooks)")
+    add("OK" if merged else "INFO",
+        "Claude hook entries merged into .claude/settings.json" if merged
+        else "Claude hook entries not merged into .claude/settings.json (optional audit hooks; run the installer)")
+    codex_hooks = (root / ".codex" / "hooks.json").is_file()
+    add("OK" if codex_hooks else "INFO",
+        ".codex/hooks.json present (Codex runs it only after you trust it via /hooks)" if codex_hooks
+        else ".codex/hooks.json not active (optional: rename .codex/hooks.sample.json to hooks.json "
+             "after review, then trust it via /hooks)")
     agents_md = root / "AGENTS.md"
     has_section = agents_md.is_file() and "BEGIN claude-agentic-orchestrator" in agents_md.read_text(encoding="utf-8", errors="replace")
-    add("OK" if has_section else "INFO", "AGENTS.md orchestration section (used by Codex and Copilot)")
+    add("OK" if has_section else "INFO",
+        "AGENTS.md has the orchestration section (used by Codex and Copilot)" if has_section
+        else "AGENTS.md has no orchestration section (needed only for Codex and Copilot)")
     if REGISTRY.is_file():
         registered = {item["agent_name"] for item in parse_registry()}
         installed = set(installed_agents(root, include_user=True))

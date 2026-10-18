@@ -31,7 +31,8 @@ function Confirm-YesNo([string]$Question, [bool]$DefaultYes = $true) {
     return $answer.Trim().ToLower().StartsWith('y')
 }
 
-function Copy-Tree([string]$Source, [string]$Destination) {
+function Copy-Tree([string]$Source, [string]$Destination, [string[]]$KeepExisting = @()) {
+    # KeepExisting: file names that are generated after install (e.g. agent-registry.yml); never offer to overwrite them.
     $copied = 0; $skipped = 0
     Get-ChildItem -Path $Source -Recurse -File | ForEach-Object {
         $relative = $_.FullName.Substring($Source.Length).TrimStart('\', '/')
@@ -39,6 +40,7 @@ function Copy-Tree([string]$Source, [string]$Destination) {
         $targetDir = Split-Path $target -Parent
         if (-not (Test-Path $targetDir)) { New-Item -ItemType Directory -Path $targetDir -Force | Out-Null }
         if (Test-Path $target) {
+            if ($KeepExisting -contains $_.Name) { $skipped++; return }
             $same = (Get-FileHash $_.FullName).Hash -eq (Get-FileHash $target).Hash
             if ($same) { $skipped++; return }
             if (-not (Confirm-YesNo "    Overwrite existing (differs): $relative" $false)) { $skipped++; return }
@@ -47,6 +49,12 @@ function Copy-Tree([string]$Source, [string]$Destination) {
         $copied++
     }
     Write-Ok "$copied file(s) copied, $skipped skipped (identical or kept)"
+}
+
+$Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+function Write-Utf8NoBom([string]$Path, [string]$Text) {
+    # Set-Content -Encoding UTF8 in Windows PowerShell 5.1 writes a byte-order mark, which strict JSON readers reject.
+    [System.IO.File]::WriteAllText($Path, $Text, $Utf8NoBom)
 }
 
 function Get-AgentRoster([string]$Python, [string]$Repo) {
@@ -262,7 +270,7 @@ if ($VerifyMode) {
     }
 } else {
     Get-ChildItem $repoPayload -Directory | Where-Object { $_.Name -notin @('.claude', '.codex', '.github') } | ForEach-Object {
-        Copy-Tree $_.FullName (Join-Path $RepoPath $_.Name)
+        Copy-Tree $_.FullName (Join-Path $RepoPath $_.Name) -KeepExisting @('agent-registry.yml')
     }
     if ($DoCodex)   { Copy-Tree (Join-Path $repoPayload '.codex')  (Join-Path $RepoPath '.codex') }
     if ($DoCopilot) { Copy-Tree (Join-Path $repoPayload '.github') (Join-Path $RepoPath '.github') }
@@ -289,12 +297,11 @@ if ($DoClaude -or $DoCopilot) {
     $settingsPath = Join-Path $settingsDir 'settings.json'
     if (-not (Test-Path $settingsDir)) { New-Item -ItemType Directory -Path $settingsDir -Force | Out-Null }
     $packSettings = $HookSettingsJson | ConvertFrom-Json
+    $backupPath = "$settingsPath.backup-orchestrator"
     if (-not (Test-Path $settingsPath)) {
-        Set-Content $settingsPath $HookSettingsJson -Encoding UTF8
+        Write-Utf8NoBom $settingsPath ($HookSettingsJson.Trim() + "`n")
         Write-Ok 'No settings.json existed; hook settings installed as settings.json.'
     } else {
-        Copy-Item $settingsPath "$settingsPath.backup-orchestrator" -Force
-        Write-Ok 'Backup written: settings.json.backup-orchestrator'
         $existing = Get-Content $settingsPath -Raw | ConvertFrom-Json
         if (-not ($existing.PSObject.Properties.Name -contains 'hooks')) {
             $existing | Add-Member -MemberType NoteProperty -Name hooks -Value ([pscustomobject]@{})
@@ -313,8 +320,19 @@ if ($DoClaude -or $DoCopilot) {
             $existing.hooks.$eventName = @($existing.hooks.$eventName) + $eventProp.Value
             $added++
         }
-        $existing | ConvertTo-Json -Depth 20 | Set-Content $settingsPath -Encoding UTF8
-        Write-Ok "$added hook event(s) merged, $present already present. Existing settings preserved."
+        if ($added -gt 0) {
+            # The first backup holds your settings from before the first install; later runs must not replace it.
+            if (Test-Path $backupPath) {
+                Write-Ok 'Kept the existing backup of your original settings: settings.json.backup-orchestrator'
+            } else {
+                Copy-Item $settingsPath $backupPath
+                Write-Ok 'Backup of your original settings written: settings.json.backup-orchestrator'
+            }
+            Write-Utf8NoBom $settingsPath (($existing | ConvertTo-Json -Depth 20) + "`n")
+            Write-Ok "$added hook event(s) merged, $present already present. Existing settings preserved."
+        } else {
+            Write-Ok "All $present hook events already present; settings.json left untouched."
+        }
     }
     if ($DoCopilot) { Write-Warn2 'VS Code Copilot reads these Claude hooks only when chat.useClaudeHooks is enabled (off by default).' }
 } else {

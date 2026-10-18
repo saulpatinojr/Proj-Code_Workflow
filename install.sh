@@ -21,12 +21,13 @@ confirm() { # confirm "question" default(y/n)
 
 hash_of() { if command -v shasum >/dev/null 2>&1; then shasum -a 256 "$1" | cut -d' ' -f1; else sha256sum "$1" | cut -d' ' -f1; fi }
 
-copy_tree() { # copy_tree SRC DST
-  local src="$1" dst="$2" copied=0 skipped=0 rel target
+copy_tree() { # copy_tree SRC DST [KEEP_NAMES]  (space-separated file names generated after install, never overwritten)
+  local src="$1" dst="$2" keep=" ${3:-} " copied=0 skipped=0 rel target
   while IFS= read -r -d '' f; do
     rel="${f#"$src"/}"; target="$dst/$rel"
     mkdir -p "$(dirname "$target")"
     if [ -f "$target" ]; then
+      case "$keep" in *" $(basename "$f") "*) skipped=$((skipped+1)); continue;; esac
       if [ "$(hash_of "$f")" = "$(hash_of "$target")" ]; then skipped=$((skipped+1)); continue; fi
       if ! confirm "    Overwrite existing (differs): $rel" n; then skipped=$((skipped+1)); continue; fi
     fi
@@ -126,7 +127,7 @@ if [ "$VERIFY_MODE" = 1 ]; then
   done
 else
   copy_tree "$PACK_ROOT/repo-root/hooks" "$REPO/hooks"
-  copy_tree "$PACK_ROOT/repo-root/tooling" "$REPO/tooling"
+  copy_tree "$PACK_ROOT/repo-root/tooling" "$REPO/tooling" "agent-registry.yml"
   if [ "$COD" = y ]; then mkdir -p "$REPO/.codex"; copy_tree "$PACK_ROOT/repo-root/.codex" "$REPO/.codex"; fi
   if [ "$COP" = y ]; then mkdir -p "$REPO/.github/hooks"; copy_tree "$PACK_ROOT/repo-root/.github" "$REPO/.github"; fi
 fi
@@ -144,11 +145,9 @@ hook = lambda ev: {"hooks": [{"type": "command",
 pack = {ev: [hook(ev)] for ev in ["SessionStart", "SubagentStart", "SubagentStop"]}
 pack["Stop"] = [{"hooks": [{"type": "command",
     "command": 'python3 "${CLAUDE_PROJECT_DIR}/hooks/claude_event.py" --event Stop', "timeout": 30}]}]
-if path.is_file():
-    shutil.copy(path, str(path) + ".backup-orchestrator")
-    data = json.loads(path.read_text(encoding="utf-8-sig"))
-else:
-    data = {}
+backup = Path(str(path) + ".backup-orchestrator")
+existed = path.is_file()
+data = json.loads(path.read_text(encoding="utf-8-sig")) if existed else {}
 hooks = data.setdefault("hooks", {})
 added = present = 0
 for ev, entries in pack.items():
@@ -158,6 +157,15 @@ for ev, entries in pack.items():
         continue
     existing.extend(entries)
     added += 1
+if not added:
+    print(f"    [OK] All {present} hook events already present; settings.json left untouched.")
+    sys.exit(0)
+# The first backup holds your settings from before the first install; later runs must not replace it.
+if existed and backup.exists():
+    print("    [OK] Kept the existing backup of your original settings: settings.json.backup-orchestrator")
+elif existed:
+    shutil.copy(path, backup)
+    print("    [OK] Backup of your original settings written: settings.json.backup-orchestrator")
 path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 print(f"    [OK] {added} hook event(s) merged, {present} already present. Existing settings preserved.")
 PYMERGE

@@ -256,6 +256,34 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(broken.returncode, 1)
         self.assertIn("not installed for any client", broken.stdout)
 
+    def test_registry_reads_wrapped_descriptions_and_trims_at_a_word(self):
+        sb = self.sb
+        sb.write(".claude/agents/wrapped.md", "---\nname: wrapped-agent\ndescription: Reviews infrastructure changes\n"
+                 "  across Terraform and Bicep\n  without editing files.\ntools:\n- Read\n---\nbody\n")
+        sb.write(".claude/agents/folded.md", "---\nname: folded-agent\ndescription: >\n  Folded text\n  on two lines.\n---\n")
+        long_words = " ".join(["capability"] * 60)
+        sb.write(".claude/agents/long.md", f"---\nname: long-agent\ndescription: {long_words}\n---\n")
+        self.assertEqual(sb.wf("registry").returncode, 0)
+        text = (sb.repo / "tooling" / "agent-registry.yml").read_text(encoding="utf-8")
+        self.assertIn('capability: "Reviews infrastructure changes across Terraform and Bicep without editing files."', text)
+        self.assertIn('capability: "Folded text on two lines."', text)
+        value = next(line for line in text.splitlines()
+                     if line.strip().startswith('capability: "capability')).split('"')[1]
+        self.assertTrue(value.endswith("..."), value)
+        kept = value[:-3]
+        self.assertTrue(long_words.startswith(kept))
+        self.assertEqual(long_words[len(kept)], " ", "trimmed mid-word")
+        self.assertLessEqual(len(kept), 240)
+
+    def test_doctor_states_hook_status_truthfully(self):
+        sb = self.sb
+        out = sb.wf("doctor").stdout
+        self.assertIn(".codex/hooks.json not active", out)
+        self.assertIn("Claude hook entries not merged", out)
+        self.assertIn("AGENTS.md has no orchestration section", out)
+        sb.write(".codex/hooks.json", "{}")
+        self.assertIn(".codex/hooks.json present", sb.wf("doctor").stdout)
+
     def test_invalid_workflow_id_is_rejected(self):
         proc = self.sb.wf("init", "--mode", "one", "--workflow-id", "../escape", "--objective", "t")
         self.assertNotEqual(proc.returncode, 0)

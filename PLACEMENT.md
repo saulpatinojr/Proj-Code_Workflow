@@ -102,7 +102,7 @@ Custom gates go in `tooling/gates.json`, for example: `{"disable": ["node"], "pr
 Remove `claude-agentic-orchestrator.*` from `~/.claude/agents`, `~/.codex/agents`, and `~/.copilot/agents`, and the six skill folders from `~/.claude/skills` and `~/.agents/skills`. In the repository:
 
 - delete `tooling\` and `hooks\`;
-- remove the four `claude_event.py` entries from `.claude/settings.json`; a pre-merge backup is in `settings.json.backup-orchestrator`;
+- remove the four `claude_event.py` entries from `.claude/settings.json`; the backup taken before the first install is in `settings.json.backup-orchestrator`;
 - delete the marked `BEGIN/END claude-agentic-orchestrator` block from `AGENTS.md`.
 
 `.agentic\` holds your workflow evidence, so keep or delete it deliberately.
