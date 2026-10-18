@@ -2,10 +2,12 @@
 from __future__ import annotations
 
 import ast
+import hashlib
 import json
 import os
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -109,7 +111,14 @@ class Sandbox:
         return self.write(f".agentic/workflows/{workflow_id}/handoffs/{agent_id}.yml", text)
 
     def cleanup(self):
-        shutil.rmtree(self.base, ignore_errors=True)
+        def unlock_and_retry(func, path, *_):
+            # git writes its object files read-only, which shutil.rmtree cannot delete on Windows
+            os.chmod(path, stat.S_IWRITE)
+            func(path)
+        if sys.version_info >= (3, 12):
+            shutil.rmtree(self.base, onexc=unlock_and_retry)
+        else:
+            shutil.rmtree(self.base, onerror=unlock_and_retry)
 
 
 class WorkflowTests(unittest.TestCase):
@@ -194,9 +203,104 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(report["workflow_status"], "blocked")
         self.assertTrue(any(e.startswith("gate failed: always-fails") for e in report["errors"]))
 
+    def test_evidence_edited_after_acceptance_goes_stale_until_restored(self):
+        sb = self.sb
+        sb.wf("init", "--mode", "selected", "--agents", "azure-architect", "--workflow-id", "wf-x", "--objective", "t")
+        sb.handoff("wf-x", "azure-architect")
+        self.assertEqual(json.loads(sb.wf("validate", "--workflow", "wf-x").stdout)["workflow_status"], "completed")
+        reviewed = (sb.repo / "main.tf").read_text(encoding="utf-8")
+        sb.write("main.tf", "terraform { edited after review }\n")
+        stale = json.loads(sb.wf("validate", "--workflow", "wf-x").stdout)
+        self.assertEqual(stale["workflow_status"], "blocked")
+        self.assertTrue(any("main.tf changed since the handoff was accepted" in e for e in stale["errors"]), stale["errors"])
+        sb.write("main.tf", reviewed)
+        self.assertEqual(json.loads(sb.wf("validate", "--workflow", "wf-x").stdout)["workflow_status"], "completed")
+
+    def test_evidence_modified_after_the_handoff_was_written_blocks(self):
+        sb = self.sb
+        sb.wf("init", "--mode", "selected", "--agents", "azure-architect", "--workflow-id", "wf-m", "--objective", "t")
+        handoff = sb.handoff("wf-m", "azure-architect")
+        later = handoff.stat().st_mtime + 60
+        os.utime(sb.repo / "main.tf", (later, later))
+        report = json.loads(sb.wf("validate", "--workflow", "wf-m").stdout)
+        self.assertEqual(report["workflow_status"], "blocked")
+        self.assertTrue(any("main.tf was modified after the handoff was written" in e for e in report["errors"]), report["errors"])
+
+    def test_sha256_recorded_in_the_handoff_decides(self):
+        sb = self.sb
+        sb.wf("init", "--mode", "selected", "--agents", "azure-architect", "--workflow-id", "wf-h2", "--objective", "t")
+        digest = hashlib.sha256((sb.repo / "main.tf").read_bytes()).hexdigest()
+        handoff = sb.handoff("wf-h2", "azure-architect")
+        handoff.write_text(handoff.read_text(encoding="utf-8").replace(
+            "    detail: Reviewed configuration.\n", f"    detail: Reviewed configuration.\n    sha256: {digest}\n"), encoding="utf-8")
+        later = handoff.stat().st_mtime + 60
+        os.utime(sb.repo / "main.tf", (later, later))
+        self.assertEqual(json.loads(sb.wf("validate", "--workflow", "wf-h2").stdout)["workflow_status"], "completed")
+        sb.write("main.tf", "terraform { different }\n")
+        report = json.loads(sb.wf("validate", "--workflow", "wf-h2").stdout)
+        self.assertEqual(report["workflow_status"], "blocked")
+        self.assertTrue(any("no longer matches the sha256 recorded in the handoff" in e for e in report["errors"]), report["errors"])
+
+    def test_reverting_a_fix_after_gates_passed_makes_gates_stale(self):
+        sb = self.sb
+        sb.write("tooling/gates.json", json.dumps({"disable": ["terraform"], "profiles": {
+            "custom": {"detect": {"any_file": ["main.tf"]},
+                       "gates": [{"id": "always-ok", "command": ["{python}", "-c", "print('ok')"]}]}}}))
+        sb.write("app.py", "FIXED = True\n")
+        sb.wf("init", "--mode", "selected", "--agents", "azure-architect", "--workflow-id", "wf-r",
+              "--objective", "t", "--require-gates")
+        sb.handoff("wf-r", "azure-architect")
+        self.assertEqual(sb.wf("gates", "--workflow", "wf-r").returncode, 0)
+        self.assertEqual(json.loads(sb.wf("validate", "--workflow", "wf-r").stdout)["workflow_status"], "completed")
+        sb.write("app.py", "FIXED = False\n")
+        stale = json.loads(sb.wf("validate", "--workflow", "wf-r").stdout)
+        self.assertEqual(stale["workflow_status"], "blocked")
+        self.assertTrue(any(e.startswith("gate results are stale") for e in stale["errors"]), stale["errors"])
+        self.assertEqual(sb.wf("export", "--workflow", "wf-r").returncode, 0)
+        manifest = json.loads((sb.repo / ".agentic/workflows/wf-r/run-manifest.json").read_text(encoding="utf-8"))
+        self.assertIn("stale", manifest["gates"][0]["summary"])
+        self.assertEqual(sb.wf("gates", "--workflow", "wf-r").returncode, 0)
+        self.assertEqual(json.loads(sb.wf("validate", "--workflow", "wf-r").stdout)["workflow_status"], "completed")
+
+    @unittest.skipUnless(shutil.which("git"), "git is not installed")
+    def test_gates_survive_a_commit_but_not_an_edit_in_a_git_repository(self):
+        sb = self.sb
+        sb.write("tooling/gates.json", json.dumps({"disable": ["terraform"], "profiles": {
+            "custom": {"detect": {"any_file": ["main.tf"]},
+                       "gates": [{"id": "always-ok", "command": ["{python}", "-c", "print('ok')"]}]}}}))
+        sb.write("app.py", "FIXED = True\n")
+
+        def git(*args):
+            return subprocess.run(["git", "-c", "user.email=t@example.invalid", "-c", "user.name=t", *args],
+                                  cwd=sb.repo, capture_output=True, text=True, check=True)
+        git("init", "-q")
+        git("add", "-A")
+        git("commit", "-q", "-m", "base")
+        sb.wf("init", "--mode", "selected", "--agents", "azure-architect", "--workflow-id", "wf-git",
+              "--objective", "t", "--require-gates")
+        sb.handoff("wf-git", "azure-architect")
+        self.assertEqual(sb.wf("gates", "--workflow", "wf-git").returncode, 0)
+        git("add", "-A")
+        git("commit", "-q", "-m", "record the workflow")
+        self.assertEqual(json.loads(sb.wf("validate", "--workflow", "wf-git").stdout)["workflow_status"], "completed")
+        sb.write("app.py", "FIXED = False\n")
+        stale = json.loads(sb.wf("validate", "--workflow", "wf-git").stdout)
+        self.assertTrue(any(e.startswith("gate results are stale") for e in stale["errors"]), stale["errors"])
+
+    def test_handoff_that_reports_blocked_does_not_complete(self):
+        sb = self.sb
+        sb.wf("init", "--mode", "selected", "--agents", "azure-architect", "--workflow-id", "wf-k", "--objective", "t")
+        handoff = sb.handoff("wf-k", "azure-architect", status="blocked")
+        handoff.write_text(handoff.read_text(encoding="utf-8").replace("next_action: none", "next_action: Grant read access"),
+                           encoding="utf-8")
+        report = json.loads(sb.wf("validate", "--workflow", "wf-k").stdout)
+        self.assertEqual(report["workflow_status"], "blocked")
+        self.assertIn("azure-architect: the agent reported blocked: Grant read access", report["errors"])
+
     def test_missing_gate_tool_is_skipped_not_failed(self):
         sb = self.sb
-        sb.write("tooling/gates.json", json.dumps({"profiles": {"ghost": {"detect": {"any_file": ["main.tf"]},
+        sb.write("tooling/gates.json", json.dumps({"profiles": {"ghost": {
+            "detect": {"any_file": ["main.tf"]},
             "gates": [{"id": "ghost-tool", "command": ["definitely-not-a-real-tool-xyz"]}]}}}))
         sb.wf("init", "--mode", "selected", "--agents", "azure-architect", "--workflow-id", "wf-s", "--objective", "t")
         results = json.loads(sb.wf("gates", "--workflow", "wf-s", "--profiles", "ghost").stdout)["results"]

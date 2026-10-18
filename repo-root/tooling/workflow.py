@@ -78,6 +78,34 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _fingerprint_files(root: Path) -> list[str]:
+    """Repository files that gate results depend on: everything outside .agentic/ that git does not ignore."""
+    git = shutil.which("git")
+    if git:
+        proc = subprocess.run([git, "-C", str(root), "ls-files", "-z", "--cached", "--others", "--exclude-standard",
+                               "--", ".", ":(exclude).agentic"], capture_output=True)
+        if proc.returncode == 0:
+            return sorted({p.decode("utf-8", "surrogateescape").replace("\\", "/") for p in proc.stdout.split(b"\0") if p})
+    files = []
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
+        files += [(Path(dirpath) / name).relative_to(root).as_posix() for name in filenames]
+    return sorted(files)
+
+
+def tree_fingerprint(root: Path) -> str:
+    """sha256 over the path and content of every repository file outside .agentic/.
+
+    Gate results are bound to this value, so a later change to the code they checked makes them stale.
+    Committing or staging does not change it; only file content does."""
+    digest = hashlib.sha256()
+    for rel in _fingerprint_files(root):
+        path = root / rel
+        digest.update(rel.encode("utf-8", "surrogateescape") + b"\0")
+        digest.update((sha256_file(path) if path.is_file() else "missing").encode() + b"\0")
+    return digest.hexdigest()
+
+
 def project_dir(cli_root: str | None) -> Path:
     if cli_root:
         return Path(cli_root).resolve()
@@ -477,9 +505,39 @@ def index_paths(root: Path, paths: list[str]) -> tuple[list[dict], list[str]]:
 
 REQUIRED_HANDOFF_KEYS = ("workflow_id", "agent_id", "status", "summary", "next_action", "authorization_used")
 HANDOFF_STATUSES = ("completed", "partial", "blocked", "failed_retryable", "failed_terminal")
+MTIME_TOLERANCE_SECONDS = 2.0
 
 
-def handoff_valid(root: Path, path: Path, node_id: str, workflow_id: str) -> tuple[bool, list[str], list[dict]]:
+def evidence_drift(root: Path, path: Path, data: dict, index: list[dict], accepted: dict | None) -> list[str]:
+    """Reasons the cited files no longer match what the agent reviewed when it wrote the handoff.
+
+    Three checks, strongest first: a sha256 the handoff itself records for a file must still match; once a
+    handoff has been accepted, every file must keep the content it had then; before the first acceptance, a
+    file modified after the handoff was written is treated as changed after review."""
+    reasons: list[str] = []
+    current = {record["path"]: record.get("sha256") for record in index if record["exists"]}
+    declared = {item["path"]: str(item["sha256"]).strip().lower()
+                for section in ("evidence", "artifacts") for item in data.get(section) or []
+                if isinstance(item, dict) and item.get("path") and item.get("sha256")}
+    for rel, digest in declared.items():
+        if rel in current and current[rel] != digest:
+            reasons.append(f"{rel} no longer matches the sha256 recorded in the handoff")
+    if accepted and accepted.get("handoff_sha256") == sha256_file(path):
+        for rel, digest in sorted(accepted.get("evidence", {}).items()):
+            if rel not in declared and current.get(rel) != digest:
+                reasons.append(f"{rel} changed since the handoff was accepted at {accepted.get('at')}; "
+                               "re-run the agent or restore the reviewed content")
+        return reasons
+    written = path.stat().st_mtime
+    for rel in sorted(set(current) - set(declared)):
+        if (root / rel).stat().st_mtime > written + MTIME_TOLERANCE_SECONDS:
+            reasons.append(f"{rel} was modified after the handoff was written; re-run the agent, or record the "
+                           "file's sha256 in the handoff if its reviewed content is unchanged")
+    return reasons
+
+
+def handoff_valid(root: Path, path: Path, node_id: str, workflow_id: str,
+                  accepted: dict | None = None) -> tuple[bool, list[str], list[dict]]:
     if not path.is_file():
         return False, ["handoff file is missing"], []
     data = parse_handoff(path.read_text(encoding="utf-8", errors="replace"))
@@ -500,7 +558,15 @@ def handoff_valid(root: Path, path: Path, node_id: str, workflow_id: str) -> tup
     errors.extend(path_errors)
     if status == "completed" and not any(record["exists"] for record in index):
         errors.append("completed handoff cites no existing evidence or artifact file")
+    if not errors:
+        errors.extend(evidence_drift(root, path, data, index, accepted))
     return not errors, errors, index
+
+
+def handoff_status(path: Path) -> tuple[str, str]:
+    """The status and next_action the agent itself reported in its handoff."""
+    data = parse_handoff(path.read_text(encoding="utf-8", errors="replace"))
+    return str(data.get("status", "")), str(data.get("next_action", ""))
 
 
 # ---- deterministic gates ------------------------------------------------------
@@ -621,7 +687,7 @@ def run_gates(args: argparse.Namespace, root: Path) -> int:
                               evidence_path=str(log.relative_to(root)).replace("\\", "/"),
                               sha256=sha256_file(log))
             results.append(record)
-    state["gates"] = {"ran_at": now(), "profiles": selected, "results": results}
+    state["gates"] = {"ran_at": now(), "profiles": selected, "results": results, "tree_sha256": tree_fingerprint(root)}
     state["updated_at"] = now()
     state_path.write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(state["gates"], indent=2))
@@ -629,9 +695,18 @@ def run_gates(args: argparse.Namespace, root: Path) -> int:
     return 1 if failed else 0
 
 
-def gate_errors(state: dict) -> list[str]:
+def gates_stale(state: dict, root: Path) -> bool:
+    """True when the repository content changed after the gates last ran, so their results no longer apply."""
+    gates = state.get("gates")
+    return bool(gates and gates.get("results")) and gates.get("tree_sha256") != tree_fingerprint(root)
+
+
+def gate_errors(state: dict, root: Path) -> list[str]:
     gates = state.get("gates")
     errors = []
+    if gates and gates_stale(state, root):
+        errors.append(f"gate results are stale: the repository changed after the gates ran at {gates.get('ran_at')}; "
+                      "re-run workflow.py gates --workflow <id>")
     if gates:
         errors += [f"gate failed: {r['gate']} ({r['summary']})" for r in gates["results"]
                    if r.get("blocking", True) and r["status"] == "failed"]
@@ -661,15 +736,23 @@ def validate_workflow(args: argparse.Namespace, root: Path) -> int:
                 node["status"] = "skipped_optional"
             results.append({"agent_id": node["id"], "valid": False, "reasons": [node["status"]]})
             continue
-        valid, reasons, index = handoff_valid(root, handoff, node["id"], state["workflow_id"])
+        valid, reasons, index = handoff_valid(root, handoff, node["id"], state["workflow_id"], node.get("accepted"))
         if valid:
-            node["status"] = "completed"
+            reported, next_action = handoff_status(handoff)
+            node["status"] = reported
+            if reported == "completed":
+                handoff_sha = sha256_file(handoff)
+                if (node.get("accepted") or {}).get("handoff_sha256") != handoff_sha:
+                    node["accepted"] = {"at": now(), "handoff_sha256": handoff_sha,
+                                        "evidence": {r["path"]: r["sha256"] for r in index if r["exists"]}}
+            elif node.get("required") and reported != "partial":
+                errors.append(f"{node['id']}: the agent reported {reported}" + (f": {next_action}" if next_action else ""))
         else:
             node["status"] = "blocked" if node.get("required") else "partial"
             if node.get("required"):
                 errors.extend(f"{node['id']}: {reason}" for reason in reasons)
         results.append({"agent_id": node["id"], "valid": valid, "reasons": reasons, "evidence_index": index})
-    errors.extend(gate_errors(state))
+    errors.extend(gate_errors(state, root))
     required = [node for node in state.get("nodes", []) if node.get("required")]
     if errors:
         state["status"] = "blocked"
@@ -773,8 +856,9 @@ def export_workflow(args: argparse.Namespace, root: Path) -> int:
         if not_verified:
             result["notVerified"] = not_verified
         results.append(result)
+    stale = " (stale: the repository changed after these gates ran)" if gates_stale(state, root) else ""
     gates = [{"gate": r["gate"], "status": r["status"], "evidenceIds": [],
-              "summary": r["summary"] + (f" (log {r['evidence_path']} sha256 {r['sha256']})" if r.get("sha256") else "")}
+              "summary": r["summary"] + (f" (log {r['evidence_path']} sha256 {r['sha256']})" if r.get("sha256") else "") + stale}
              for r in (state.get("gates") or {}).get("results", [])]
     manifest = {"runId": workflow_id, "task": task, "assignments": assignments, "results": results, "gates": gates}
     target = directory / "run-manifest.json"
