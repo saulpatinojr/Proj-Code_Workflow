@@ -11,6 +11,10 @@ Pre-alpha rebrand as **Code Workflow**, the slim, in-client sibling of Code Cond
   - cited evidence and artifact paths must be repository-relative, and paths escaping the repository are rejected;
   - existing files are hashed;
   - a `completed` handoff must cite at least one real file.
+- Completion is bound to what was reviewed and checked:
+  - a handoff's cited files must keep the content they had when the handoff was accepted, or the sha256 the handoff records; a file modified after the handoff was written blocks its first acceptance;
+  - gate results record a fingerprint of the repository's content outside `.agentic/`, and become stale, blocking validation and marked in the export, when that content changes;
+  - a node takes the status its agent reported, so a handoff that reports `blocked` or a failure no longer completes the workflow.
 - `workflow.py export`: writes `run-manifest.json` in Code Conductor's `RunManifest`/`AgentResult` shape, including `notVerified`. It never recommends `ready` and never writes a merge decision. Use `cc import` on the Code Conductor side.
 - `workflow.py doctor`: install health check covering clients, skills, hooks, registry freshness, and the `.agentic/.gitignore`.
 - `init --risk R0..R4` and `--acceptance "a; b"`, both carried into the export.

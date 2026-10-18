@@ -12,7 +12,10 @@ Run `python tooling/workflow.py gates --workflow <workflow-id>` when the reposit
 - optional agent not installed and skipped;
 - required agent unavailable and workflow blocked;
 - parent-only work with no agent invocation;
-- static validation passed but live external behavior remains unverified.
+- static validation passed but live external behavior remains unverified;
+- evidence or gate results that went stale because files changed after review or after the gates ran.
+
+Gate results are bound to the repository's content when they run. After any further change, re-run `workflow.py gates` before `validate`; stale results block completion.
 
 Retry only `failed_retryable` nodes and preserve the original handoff. If a client permission, authentication, quota, or tool failure prevents execution, report the exact blocked state. Never convert a missing handoff into a successful summary.
 
