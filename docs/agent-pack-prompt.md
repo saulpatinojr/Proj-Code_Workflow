@@ -1,6 +1,6 @@
 # MASTER PROMPT — CREATE AN AGENT PACK FROM A ROLE
 
-Prompt version 2.1 (2026-10-18). Vendor facts this prompt relies on are in `client-locations.md` in the same folder; read it before generating.
+Prompt version 2.2 (2026-10-18). Vendor facts this prompt relies on are in `client-locations.md` in the same folder; read it before generating.
 
 ROLE: [Enter the role here]
 
@@ -94,6 +94,7 @@ The pack must work when installed once into the user profile and used from every
 - Nothing may depend on files at a repository root. No `shared/` folders, and no repo-level `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, or `copilot-instructions.md` as a prerequisite. Repository-level instructions are an optional extra for GitHub Copilot code review, generated from `.apm/instructions`.
 - Hook commands reference scripts by a path the installer supplies, never a repository-relative path such as `.github/hooks/scripts/...`.
 - Instructions that must apply everywhere go in `.apm/instructions/` so they generate into `~/.claude/rules`, `~/.copilot/instructions`, `~/.kiro/steering`, and the Codex and Gemini context files.
+- Installed content (agents, skills, instructions, prompts) may reference only what is installed with it. Never point the model at `docs/`, `tests/`, `templates/`, `shared/`, `INSTALL.md`, or a repository context file. Any contract the model must follow, such as approval levels, handoff rules, or the completion report format, is itself an always-on instruction in `.apm/instructions/` with `applyTo: "**"`. Pack docs are for humans and must describe the current layout.
 
 Verify current official vendor Agent/Skill specifications before generating. Use the field names and tool identifiers recorded in `client-locations.md`:
 
@@ -152,6 +153,7 @@ Verify:
 - `apm compile --validate` passes, and `apm install --dry-run` for every declared target reports what it would deploy
 - Content is specific to the requested role
 - Skills, prompts, agents, hooks, and contracts reference existing files
+- Installed content references only installed content, and pack docs do not describe a previous layout (automated scan)
 - Vendor packages produced by the build contain their required dependencies
 - Tool permissions match responsibilities, and no agent contradicts itself
 - Metadata conforms to current vendor specifications in `client-locations.md`
@@ -197,6 +199,13 @@ SAME FRAMEWORK. SAME COMPLETENESS STANDARD. FRESH ROLE-SPECIFIC CONTENT.
 ---
 
 ## Change log
+
+### Version 2.2 (2026-10-18)
+
+Found by auditing the restructured Python Distinguished Engineer pack: moving folders is not enough. Every agent still told the model to read `CLAUDE.md`, `shared/` and `docs/` at a repository root that no longer exists.
+
+- Section 5: installed content may reference only installed content; contracts become always-on instruction files.
+- Section 8: automated reference scan over `.apm/` and pack docs.
 
 ### Version 2.1 (2026-10-18)
 
