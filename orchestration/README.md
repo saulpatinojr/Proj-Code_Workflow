@@ -44,7 +44,10 @@ To undo, delete the files listed in `~/.code-workflow/generated.json`, then copy
 
 ## Layout
 
-- `generate.py`: the generator. Standard library only, Python 3.8 or later.
+- `generate.py`: the command. It detects clients, runs each client's planner and reports. Standard library only, Python 3.8 or later.
+- `safe_files.py`: the write rules above, in one place.
+- `common.py`: helpers shared by the planners, such as rendering, the skills and the controller command.
+- `claude_code.py`: Claude Code's planner. Each further client gets its own module beside it and its own templates folder.
 - `templates/<client>/`: the templates for one client. Placeholders: `name`, `tools`, `skills`, `controller`, `pack_home`, `roster`.
 - `skills/`: the six workflow skills, identical for every client. Their only placeholders are `controller` and `pack_home`.
 

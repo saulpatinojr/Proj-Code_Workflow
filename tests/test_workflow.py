@@ -418,7 +418,8 @@ class WorkflowTests(unittest.TestCase):
                               capture_output=True, text=True)
         decision = json.loads(proc.stdout)
         self.assertEqual(decision.get("decision"), "block")
-        self.assertIn((pack / "tooling" / "workflow.py").as_posix(), decision["reason"])
+        # The hook names the resolved path; Windows runners give temp folders a short 8.3 alias otherwise.
+        self.assertIn((pack / "tooling" / "workflow.py").resolve().as_posix(), decision["reason"])
 
     def test_doctor_reports_install_health(self):
         sb = self.sb
