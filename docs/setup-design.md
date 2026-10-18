@@ -29,7 +29,7 @@ Code Workflow is the light sibling of Code Conductor; the same packs serve both 
 | Orchestrators | Not packs. An orchestrator is a client's main coordinating agent. It is generated for each desktop from the tools found there and the packs, agents and skills the user selected, using a template per client. The Codex seed is kept unchanged in `Proj-Agent_Packs/orchestrators/` as reference. Orchestration templates are the current priority; the next section holds their decisions. |
 | Clients and their folders | Each engine reads its own home folder, shared by all its surfaces: `~/.claude` (Claude Code CLI, its VS Code extension, VS Code's Claude harness), `~/.codex` with `~/.agents/skills` (Codex CLI, its VS Code extension, the ChatGPT desktop app), `~/.copilot` (Copilot in VS Code, Copilot CLI, the Copilot app), `~/.kiro` (Kiro IDE and CLI), and `~/.gemini/config` (Antigravity IDE, App and CLI). `client-locations.md` lists the verified paths per surface, re-verified 2026-10-18, and what still needs a hands-on test. |
 | Platforms | Windows and macOS. Linux is not tested. |
-| Distribution | Plain files in the user-profile locations, no plugins. Until APM installs everything needed, a temporary script copies the needed files. The OneDrive folder `CodeFlow Agents` holds only the files the installed clients need and syncs them between laptop and desktop; it is never edited as a source. |
+| Distribution | Plain files in the user-profile locations, no plugins; the one exception is the small VS Code helper extension of orchestration decision 10. Until APM installs everything needed, a temporary script copies the needed files. The OneDrive folder `CodeFlow Agents` holds only the files the installed clients need and syncs them between laptop and desktop; it is never edited as a source. |
 | Names and collisions | Packs and primary agents are named for the role. Names carry no artificial prefix; a qualifier inside a name, such as `build-python-mcp-server`, is fine. Two packs may ship the same name only with identical content, kept as one shared primitive in `Proj-Agent_Packs/shared-primitives/`; CI checks this. |
 | Validation | Tier 1, deterministic: `Proj-Agent_Packs/tooling/validate_pack.py`, including an APM install for every target, on every pull request and weekly on Windows, macOS and Linux. Tier 2, AI: the generation engine creates or completes packs and checks them independently, as pull requests. Tier 3, keeping facts current: weekly watch workflows for vendor documentation (here), and for APM, draw.io and cloud icon releases (in Proj-Agent_Packs). Priority when choosing how: feasibility, then ease of use, then cost. |
 | APM | 0.33.0, pinned in Proj-Agent_Packs CI; a weekly workflow reports newer releases. |
@@ -41,7 +41,7 @@ Code Workflow is the light sibling of Code Conductor; the same packs serve both 
 
 ## Orchestration decisions
 
-Agreed 2026-10-18, answering the nine questions asked before step 5.
+Agreed 2026-10-18: the answers to the nine questions asked before step 5, and decision 10, which followed from the location check.
 
 | # | Topic | Decision |
 |---|---|---|
@@ -54,6 +54,7 @@ Agreed 2026-10-18, answering the nine questions asked before step 5.
 | 7 | Hooks | Generated where a client supports them, and off until the user turns them on. |
 | 8 | Order | VS Code first: Claude Code, Codex and Copilot. Then Kiro and Antigravity, in either order. The apps (Antigravity app, GitHub Copilot app, VS Code's agent interface) must work too. |
 | 9 | Home | Templates and the generator live in Code Workflow, the tool that runs on the desktop. Packs stay in Proj-Agent_Packs. |
+| 10 | Settings an orchestrator needs | Setup never changes a client setting silently. In VS Code, a small helper extension from Code Workflow, installed from a local file and never published, checks the settings the installed orchestrators need. When one is off it shows a notification with **Turn On** (changes the user setting after the click), **Open Setting** (opens Settings filtered to that setting) and **Don't Ask Again**. The first check is `github.copilot.chat.cli.customAgents.enabled`, which the Copilot orchestrator needs in VS Code's Copilot harness. Agreed 2026-10-18. |
 
 ### What the location check means for the templates
 
@@ -97,4 +98,3 @@ Agreed 2026-10-18, answering the nine questions asked before step 5.
 ## Decisions still needed
 
 - Whether regeneration of a failing pack may replace the source automatically, or always waits for approval of the diff (current design: waits, through a pull request).
-- Whether setup may turn on `github.copilot.chat.cli.customAgents.enabled` in the user's VS Code settings, or only tells the user to, so that the Copilot orchestrator appears in VS Code's Copilot harness.
