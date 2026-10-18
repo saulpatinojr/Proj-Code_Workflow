@@ -35,4 +35,4 @@ Next, once you merge, is the Codex template, then Copilot together with the VS C
 
 - `~/.code-workflow/backup/20261018T231002Z/`: the only copy of the old installer's Claude Code files, needed for an undo.
 - `user-claude/`, `user-codex/`, `user-copilot/`, `repo-root/`, `install.ps1` and `install.sh`: the old installers still use them, until the local setup script (plan step 6) replaces them.
-- The old installer's skills in `~/.agents/skills/` and its Codex and Copilot orchestrators: still in use until their templates replace them.
+- Codex and Copilot have no Code Workflow orchestrator on this computer: the old installer was only ever run for Claude Code here. Their templates come next.
