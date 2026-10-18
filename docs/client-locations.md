@@ -79,6 +79,18 @@ This file records where each targeted AI client reads **user-level** configurati
 | Gemini CLI | Extension folder under `~/.gemini/extensions/<name>/` with `gemini-extension.json`, installed with `gemini extensions install <path or GitHub URL>` | Agents, skills, commands, hooks, GEMINI.md, MCP servers. Extension agents and skills rank below user-level ones. |
 | Copilot CLI and VS Code | `~/.copilot/installed-plugins/`, Agent Plugins 1.0 format | Agents, skills, MCP, hooks. VS Code finds CLI-installed plugins only when `chat.plugins.enabled` is on, default off. |
 
+## Agent file fields and tool identifiers
+
+Verified 2026-10-18. A pack validator should reject anything not listed here.
+
+| Client | Required fields | `tools` syntax and valid values | Other documented fields |
+|---|---|---|---|
+| Claude Code | `name`, `description` (a file with a name but no description is skipped) | Comma-separated string or YAML list. Built-ins: Read, Grep, Glob, LSP, Bash, PowerShell, Edit, Write, NotebookEdit, WebFetch, WebSearch, TodoWrite, Skill, ToolSearch, Agent, EnterWorktree, ExitWorktree, Monitor, TaskStop, SendMessage, Artifact. MCP: `mcp__<server>__*`. If no entry resolves, the agent fails to launch. Use the `skills` field to preload skills, not `tools: Skill`. | `disallowedTools`, `model` (sonnet, opus, haiku, fable, full ID, inherit), `permissionMode` (default, acceptEdits, auto, dontAsk, bypassPermissions, plan, manual), `skills` (first 32 preloaded), `hooks`, `memory` (user, project, local), `maxTurns`, `effort`, `isolation: worktree`, `color`, `background`, `mcpServers` |
+| Copilot CLI and VS Code | `description` | String array or comma-separated string. Aliases, case-insensitive: execute, read, edit, search, agent, web, todo. `*` grants everything, `[]` disables all, `server/tool` and `server/*` for MCP. Unrecognised names are ignored silently. | `name`, `user-invocable` (VS Code and shared reference; not in the CLI table), `include-custom-instructions` (default false; subagents skip AGENTS.md without it), `model`, `models`, `modelPolicy` (preferred, required), `reasoningEffort`, `mcp-servers`. `infer` is retired. VS Code adds `handoffs`, `agents`, `argument-hint`, `disable-model-invocation`, `target`, `hooks`. |
+| Codex CLI | `name`, `description`, `developer_instructions` | No tools field. | `model`, `model_reasoning_effort`, `model_reasoning_summary`, `model_verbosity`, `features.*`, `skills.config`. Ignored if set: `sandbox_mode`, `approval_policy`, `model_provider`, `mcp_servers`. |
+| Kiro | none (name defaults to the file name) | List of tool names; see kiro.dev configuration reference. | `description`, `prompt`, `permissions`, `resources`, `model` |
+| Gemini CLI | `name` (lowercase letters, digits, hyphens, underscores), `description` | YAML list. Built-ins: run_shell_command, glob, grep_search, list_directory, read_file, read_many_files, replace, write_file. Wildcards `*`, `mcp_*`, `mcp_<server>_*`. Omitted means inherit all. | `kind` (local, remote), `max_turns` (default 30), `model`, `temperature`, `timeout_mins`, `mcpServers` |
+
 ## APM (Agent Package Manager, Microsoft)
 
 Verified 2026-10-18 against microsoft.github.io/apm and the installed CLI 0.33.0.
@@ -120,6 +132,7 @@ Verified 2026-10-18 against docs.github.com.
 - Claude Code: code.claude.com/docs/en/sub-agents, /skills, /hooks, /memory, /settings, /claude-directory, /plugins/install, /plugins/manifest-reference, /changelog
 - Codex CLI: learn.chatgpt.com/docs/agent-configuration/subagents, /agent-configuration/agents-md, /build-skills, /hooks, /config-file/environment-variables, /windows/windows-app; developers.openai.com/plugins/build/plugins; github.com/openai/codex releases
 - GitHub Copilot CLI: docs.github.com/en/copilot/reference/copilot-cli-reference/cli-command-reference, /cli-config-dir-reference, /cli-plugin-reference, /reference/hooks-reference, /how-tos/copilot-cli/customize-copilot/add-custom-instructions; github.com/github/copilot-cli changelog
+- Agent fields: code.claude.com/docs/en/sub-agents; docs.github.com/en/copilot/reference/custom-agents-configuration and cli-command-reference; github.com/google-gemini/gemini-cli docs/core/subagents.md and docs/reference/tools.md
 - APM: microsoft.github.io/apm reference pages manifest-schema, targets-matrix, package-anatomy, cli/install, cli/compile, cli/pack, cli/audit
 - Copilot code review: docs.github.com/en/copilot/reference/custom-instructions-support, /how-tos/use-copilot-agents/use-code-review, /tutorials/customize-code-review
 - Kiro: kiro.dev/docs/custom-agents, /steering, /skills, /hooks, /mcp/configuration, /configuration, kiro.dev/changelog
