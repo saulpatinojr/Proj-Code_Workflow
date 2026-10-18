@@ -1,0 +1,28 @@
+{
+  "about": "Facts behind docs/client-locations.md, each tied to a phrase on an official page. The weekly watch-docs workflow fetches every page and opens an issue when a phrase is no longer found, which means the vendor moved or changed something and client-locations.md must be re-verified.",
+  "verified": "2026-10-18",
+  "facts": [
+    {"id": "claude-user-agents", "client": "Claude Code", "fact": "User subagents in ~/.claude/agents apply to all projects", "url": "https://code.claude.com/docs/en/sub-agents.md", "phrase": "available in all your projects"},
+    {"id": "claude-user-skills", "client": "Claude Code", "fact": "Personal skills in ~/.claude/skills apply to all projects", "url": "https://code.claude.com/docs/en/skills.md", "phrase": "Personal skills are available across all your projects"},
+    {"id": "claude-hook-shell", "client": "Claude Code", "fact": "Hook commands run in Git Bash on Windows, PowerShell without it", "url": "https://code.claude.com/docs/en/hooks.md", "phrase": "Git Bash on Windows"},
+    {"id": "claude-user-rules", "client": "Claude Code", "fact": "~/.claude/rules apply to every project", "url": "https://code.claude.com/docs/en/memory.md", "phrase": "apply to every project on your machine"},
+    {"id": "claude-config-dir", "client": "Claude Code", "fact": "CLAUDE_CONFIG_DIR relocates ~/.claude", "url": "https://code.claude.com/docs/en/claude-directory.md", "phrase": "CLAUDE_CONFIG_DIR"},
+    {"id": "codex-user-agents", "client": "Codex CLI", "fact": "Personal agents are TOML files in ~/.codex/agents", "url": "https://learn.chatgpt.com/docs/agent-configuration/subagents", "phrase": "~/.codex/agents/"},
+    {"id": "codex-agent-fields", "client": "Codex CLI", "fact": "Agent files require developer_instructions", "url": "https://learn.chatgpt.com/docs/agent-configuration/subagents", "phrase": "developer_instructions"},
+    {"id": "codex-global-agents-md", "client": "Codex CLI", "fact": "~/.codex/AGENTS.md applies to every repository", "url": "https://learn.chatgpt.com/docs/agent-configuration/agents-md", "phrase": "every repository inherits"},
+    {"id": "codex-user-skills", "client": "Codex CLI", "fact": "User skills in ~/.agents/skills apply to any repository", "url": "https://learn.chatgpt.com/docs/build-skills", "phrase": "apply to any repository the user may work in"},
+    {"id": "codex-hook-trust", "client": "Codex CLI", "fact": "Hooks need trust and re-trust after any edit", "url": "https://learn.chatgpt.com/docs/hooks", "phrase": "current hash"},
+    {"id": "copilot-cli-user-agents", "client": "Copilot CLI", "fact": "User agents in ~/.copilot/agents", "url": "https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-command-reference", "phrase": "~/.copilot/agents/"},
+    {"id": "copilot-cli-user-hooks", "client": "Copilot CLI", "fact": "User hooks in ~/.copilot/hooks", "url": "https://docs.github.com/en/copilot/reference/hooks-reference", "phrase": "~/.copilot/hooks/"},
+    {"id": "copilot-cli-user-instructions", "client": "Copilot CLI", "fact": "User-level instructions apply across repositories", "url": "https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-custom-instructions", "phrase": "apply across repositories"},
+    {"id": "copilot-code-review-files", "client": "Copilot code review", "fact": "Code review reads REVIEW.md among agent instruction files", "url": "https://docs.github.com/en/copilot/reference/custom-instructions-support", "phrase": "REVIEW.md"},
+    {"id": "vscode-user-agents", "client": "VS Code", "fact": "Copilot user agents in ~/.copilot/agents", "url": "https://code.visualstudio.com/docs/agent-customization/custom-agents", "phrase": "~/.copilot/agents"},
+    {"id": "vscode-claude-hooks", "client": "VS Code", "fact": "Claude hook files need chat.useClaudeHooks", "url": "https://code.visualstudio.com/docs/agent-customization/hooks", "phrase": "useClaudeHooks"},
+    {"id": "kiro-user-agents", "client": "Kiro", "fact": "Global agents in ~/.kiro/agents", "url": "https://kiro.dev/docs/custom-agents/", "phrase": "~/.kiro/agents/"},
+    {"id": "kiro-user-steering", "client": "Kiro", "fact": "Global steering in ~/.kiro/steering", "url": "https://kiro.dev/docs/steering/", "phrase": "~/.kiro/steering/"},
+    {"id": "gemini-user-agents", "client": "Gemini CLI", "fact": "User subagents in ~/.gemini/agents", "url": "https://geminicli.com/docs/core/subagents", "phrase": "~/.gemini/agents/"},
+    {"id": "gemini-user-context", "client": "Gemini CLI", "fact": "Global context file ~/.gemini/GEMINI.md", "url": "https://geminicli.com/docs/cli/gemini-md", "phrase": "~/.gemini/GEMINI.md"},
+    {"id": "apm-kiro-tools", "client": "APM", "fact": "APM refuses a Kiro agent whose tools are outside Kiro's capability tags", "url": "https://microsoft.github.io/apm/reference/targets-matrix/", "phrase": "fails closed"},
+    {"id": "actions-free-public", "client": "GitHub Actions", "fact": "Actions minutes are free for public repositories on standard runners", "url": "https://docs.github.com/en/billing/concepts/product-billing/github-actions", "phrase": "free for self-hosted runners and for public repositories"}
+  ]
+}

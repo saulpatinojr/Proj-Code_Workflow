@@ -1,0 +1,47 @@
+name: watch vendor docs
+
+# Weekly: confirm every fact in docs/client-facts.json is still stated on its official page.
+# When one is not, open (or update) a single issue listing them, so docs/client-locations.md gets re-verified.
+# A push that edits the facts file runs the same check and simply fails if a phrase is wrong.
+on:
+  schedule:
+    - cron: '11 8 * * 1'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - docs/client-facts.json
+      - .github/scripts/check_vendor_facts.py
+      - .github/workflows/watch-docs.yml
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  facts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TITLE: 'Vendor docs drift: client-locations facts need re-verification'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - id: check
+        run: python .github/scripts/check_vendor_facts.py --markdown drift.md
+        continue-on-error: true
+      - name: open or update the drift issue
+        if: steps.check.outcome == 'failure' && github.event_name != 'push'
+        run: |
+          number=$(gh issue list --state open --search "in:title \"$TITLE\"" --json number,title --jq ".[] | select(.title == \"$TITLE\") | .number" | head -1)
+          if [ -n "$number" ]; then
+            gh issue comment "$number" --body-file drift.md
+          else
+            gh issue create --title "$TITLE" --body-file drift.md
+          fi
+      - name: fail the run when a fact is unconfirmed
+        if: steps.check.outcome == 'failure'
+        run: exit 1
