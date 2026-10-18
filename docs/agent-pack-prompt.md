@@ -1,6 +1,6 @@
 # MASTER PROMPT — CREATE AN AGENT PACK FROM A ROLE
 
-Prompt version 2.2 (2026-10-18). Vendor facts this prompt relies on are in `client-locations.md` in the same folder; read it before generating.
+Prompt version 2.3 (2026-10-18). Vendor facts this prompt relies on are in `client-locations.md` in the same folder; read it before generating.
 
 ROLE: [Enter the role here]
 
@@ -30,7 +30,7 @@ The pack is an APM package. The canonical source is the `.apm/` folder, and ever
 - `apm.yml` using only fields APM defines: `name`, `version`, `description`, `author`, `license` (SPDX), `repository`, `keywords`, and `targets` listing `copilot`, `claude`, `codex`, `gemini`, `kiro`, `agent-skills`. Do not add `source`, `agents`, or `skills` at the top level; APM ignores them.
 - `.apm/agents/*.agent.md` (canonical agents)
 - `.apm/skills/<name>/SKILL.md` (canonical Skills; folder name equals `name`)
-- `.apm/instructions/*.instructions.md` with `description` and `applyTo` frontmatter
+- `.apm/instructions/*.instructions.md` with `description` and `applyTo` frontmatter, including one always-on `<name>-contract.instructions.md` (`applyTo: "**"`) that carries the approval, handoff and completion-report rules the agents refer to
 - `.apm/prompts/*.prompt.md` (the `agent` field is honoured by Copilot and dropped by Claude, which supports only description, input, allowed-tools, model, argument-hint)
 - DESCRIPTION.md
 - README.md
@@ -43,8 +43,8 @@ The pack is an APM package. The canonical source is the `.apm/` folder, and ever
 - examples/
 - templates/
 - hooks/ for helper scripts and reviewed samples only. Do not ship native hook definitions: APM copies hook commands verbatim and never deploys the scripts they call, so any command path would break after install. Hook wiring belongs to the installer.
-- tests/
-- tooling/, including a build script that produces the distribution archives
+- tests/, including `tests/skill-coverage.yml` generated from the skills by the repository's shared `tooling/skill_coverage.py`
+- tooling/ only for pack-specific helper scripts. Validation, build and restructure code is shared at the pack repository root (`tooling/validate_pack.py`, `tooling/build_pack.py`, `tooling/restructure_pack.py`) and is never copied into a pack.
 
 Do not hand-build `targets/<vendor>/` trees. Vendor files are derived from `.apm/` by APM or by the Code Workflow installer at install time. Instead, prove generation works in validation (section 8).
 
@@ -199,6 +199,12 @@ SAME FRAMEWORK. SAME COMPLETENESS STANDARD. FRESH ROLE-SPECIFIC CONTENT.
 ---
 
 ## Change log
+
+### Version 2.3 (2026-10-18)
+
+Set while converting fifteen packs with the shared engine.
+
+- Section 2: validation, build and restructure tooling is shared at the pack repository root; packs keep only their own helpers. `tests/skill-coverage.yml` is generated from the skills. The always-on contract instruction is a named, required artifact.
 
 ### Version 2.2 (2026-10-18)
 
