@@ -40,6 +40,10 @@ Install agent packs once, into the user profile, so every repository opened in V
 5. **Regeneration engine and remaining packs.** Build the engine, then use it to regenerate the 13 agents without a canonical source as full packs, one role at a time, with the installed file as reference material.
 6. **Tiers 2 and 3.** AI pack review and AI location refresh, both producing diffs for approval.
 
+## Progress
+
+- 2026-10-18: `saulpatinojr/Proj-Agent_Packs` created (private). The Python Distinguished Engineer pack was restructured to prompt v2.1, validated (120 checks, APM install into a scratch project for six targets), and pushed. The other two packs remain at prompt v1. Working copy for editing: `Workspace\Proj-Agent_Packs`. The OneDrive folder still holds the old full copy and will become the needed-files-only folder once the installer exists.
+
 ## Decisions still needed
 
 - Whether regeneration of a failing pack may replace the source automatically, or always waits for approval of the diff (current design: waits).
