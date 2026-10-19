@@ -27,6 +27,7 @@ risks:
     detail: Unresolved risk.
 next_action: The next safe action or "none".
 authorization_used: read-only
+stance: critical # optional: constructive | critical | neutral, as the delegation named it
 not_verified:
   - Live deployment was not performed.
 ```

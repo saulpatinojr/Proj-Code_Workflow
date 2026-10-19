@@ -259,6 +259,21 @@ class TemplateTests(unittest.TestCase):
             used = set(re.findall(r"\{\{([a-z_]+)\}\}", path.read_text(encoding="utf-8")))
             self.assertLessEqual(used, PLACEHOLDERS, path)
 
+    def test_orchestrator_carries_the_roles_without_a_readiness_verdict(self):
+        reference = (SKILLS / "agentic-workflow-dispatch" / "references" / "roles-and-stances.md").read_text(encoding="utf-8")
+        for stance in ("constructive", "critical", "neutral"):
+            self.assertIn(f"`{stance}`", reference)
+        for rule in ("never the node that built", "A stronger model does not win", "never approves or merges"):
+            self.assertIn(rule, reference)
+        for path in list(SKILLS.rglob("*.md")) + list((ROOT / "orchestration" / "templates").rglob("*.md")):
+            text = path.read_text(encoding="utf-8")
+            self.assertNotIn("mergeDecision", text, path)
+            self.assertNotIn("recommendation: ready", text, path)
+        agent = (ROOT / "orchestration" / "templates" / "claude-code" / "agent.md").read_text(encoding="utf-8")
+        self.assertIn("## Roles, stances and independence", agent)
+        self.assertIn("never reviews its own output", agent)
+        self.assertIn("never say a change is ready to merge", agent)
+
     def test_skills_never_tie_the_controller_to_a_repository_copy(self):
         for path in SKILLS.rglob("*.md"):
             text = path.read_text(encoding="utf-8")

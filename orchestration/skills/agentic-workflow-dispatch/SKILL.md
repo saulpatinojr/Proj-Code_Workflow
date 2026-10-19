@@ -11,13 +11,14 @@ The Code Workflow controller is installed once in the user profile. Run it from 
 
 1. Read the repository's instructions, and identify the requested outcome, the authorization boundary and the acceptance criteria.
 2. Run `{{controller}} discover --client <client>` when you do not know which specialists are available. Treat its output as evidence, not as authorization.
-3. Choose `one`, `selected` or `all`, and mark each node required or optional.
+3. Classify the work (R0 to R4) and give each node a stance, as [references/roles-and-stances.md](references/roles-and-stances.md) says; choose `one`, `selected` or `all`, and mark each node required or optional. The node that reviews is never the node that built.
 4. Run `{{controller}} init --client <client> --mode <mode> --objective "..."` before starting any subagent. The workflow folder is the source of truth for status.
 5. Plan by dependency. Run only independent nodes in parallel, and never more at once than the workflow's `max_parallel`.
-6. Start each required node with your client's own subagent mechanism, using the exact registered agent name. Give it the task, the relevant files, the acceptance criteria, the authorization limits and its handoff path.
+6. Start each required node with your client's own subagent mechanism, using the exact registered agent name. Give it the task, its stance, the relevant files, the acceptance criteria, the authorization limits and its handoff path.
 7. Require a handoff that follows [references/handoff-contract.md](references/handoff-contract.md). A summary in the conversation is not a completed handoff.
 8. Run `{{controller}} gates --workflow <workflow-id>` when the repository has deterministic checks (Terraform, Ansible, npm, pytest, or the repository's own `tooling/gates.json`), then `{{controller}} validate --workflow <workflow-id>` before you summarize. Gate results outrank any agent's opinion that a check passed. Do not claim success while a required node or gate is missing, failing, blocked or unverified.
-9. Summarize only from the recorded handoffs and artifacts, and keep disagreements and uncertainty visible.
+9. When handoffs disagree, rule by the order of authority in the roles reference (requirements and policy, then executable evidence, then official references; the agents' confidence last), record the ruling, and escalate what evidence cannot settle. When the change has a pull request, read its checks and reviews from GitHub before the summary; a failing required check blocks.
+10. Summarize only from the recorded handoffs and artifacts, and keep disagreements and uncertainty visible. Never say the change is ready to merge: that decision belongs to Code Conductor.
 
 ## Selection rules
 

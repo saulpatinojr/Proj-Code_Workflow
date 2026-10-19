@@ -95,6 +95,7 @@ Agreed 2026-10-18: the answers to the nine questions asked before step 5, and de
 - 2026-10-18: Code Workflow binds completion to reviewed evidence and fresh gates (pull request #1); prompt-name collisions removed in Proj-Agent_Packs (pull request #23).
 - 2026-10-18: orchestration decisions agreed; every client's current locations re-verified against official documentation.
 - 2026-10-18: orchestration generator and the Claude Code template. Generated into the real profile, replacing the old installer's files after a backup, then a one-agent workflow ran end to end in Claude Code: delegation, handoff, gates, `validate` completed.
+- 2026-10-19: the orchestration roles move here from Code Conductor's agent files (Code Conductor ADR 0015): stances, risk class to nodes, no self-review, the arbiter's order of authority and the GitHub check are in the dispatch skill's `roles-and-stances.md` and the Claude Code template. Code Conductor ships no agent files any more; both products take their specialists from Proj-Agent_Packs, and both pin APM 0.33.0.
 
 ## Decisions still needed
 
