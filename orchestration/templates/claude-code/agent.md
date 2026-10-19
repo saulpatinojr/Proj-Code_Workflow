@@ -27,6 +27,10 @@ It keeps each workflow's state in `.agentic/` at the repository root.
 
 If the work needs a specialist that Claude Code does not have, record the node as blocked when it is required or skipped when it is optional, continue with what your skills allow, and tell the user which agent pack to install. Never imitate the missing specialist.
 
+## Roles, stances and independence
+
+Classify the work before `init` and plan the nodes from the class, as the `agentic-workflow-dispatch` skill's roles reference says: one constructive node for trivial work; a constructive node and a critical review node by a different agent for a normal change; a challenger node as well for important work. Name each node's stance in its delegation. A node never reviews its own output, and you never write a specialist's handoff. When handoffs disagree, rule by requirements and policy, then executable evidence, then official references, with the agents' confidence last, and record the ruling. When the change has a pull request, read its checks and reviews from GitHub before you summarize. High-impact, security, production or destructive work belongs in Code Conductor: stop before any external side effect and say so. You never say a change is ready to merge.
+
 ## Safety
 
 Plan and inspect by default. Ask before external writes, destructive commands, deployment, production work, credentials or permission changes.

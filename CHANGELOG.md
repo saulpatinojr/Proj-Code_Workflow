@@ -6,6 +6,7 @@ Pre-alpha rebrand as **Code Workflow**, the slim, in-client sibling of Code Cond
 
 ### Added
 
+- Roles, stances and independence in the orchestration (Code Conductor ADR 0015): `agentic-workflow-dispatch` gains `references/roles-and-stances.md`, the Manager, Judge and Auditor rules shared with Code Conductor's `config/roles.yaml`. The orchestrator classifies the work (R0 to R4) and plans the nodes from the class, names a stance (`constructive`, `critical`, `neutral`) in every delegation, never lets a node review its own output, rules between disagreeing handoffs by requirements and policy, then executable evidence, then official references, with the agents' confidence last, and reads a pull request's checks and reviews from GitHub before the summary. R3 and R4 work stops before any external side effect and is sent to Code Conductor. Handoffs may record `stance`. The orchestrator still never says a change is ready to merge; the Claude Code template carries the section, and a test keeps every template and skill free of a readiness verdict.
 - `workflow.py gates`: deterministic Terraform, Ansible, npm, and pytest checks, plus custom profiles in `tooling/gates.json`. Output is logged with a sha256. A missing tool is recorded as `skipped`, never as passed. `init --require-gates` makes gates mandatory.
 - Evidence integrity in `validate`:
   - cited evidence and artifact paths must be repository-relative, and paths escaping the repository are rejected;
