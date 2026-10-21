@@ -40,10 +40,10 @@ Important: the payload folders **mirror** their destinations. A file at `user-cl
 
 ## How to check your work
 
-Run from the repository root. These are the same checks the automated pipeline (`.github/workflows/ci.yml`) runs.
+Run from the repository root. These are the core checks you can run locally. The automated pipeline (`.github/workflows/ci.yml`) runs them on Windows, macOS, and Linux with several Python versions, and it also checks that `install.ps1` parses.
 
 ```bash
-python -m unittest discover -s tests -v    # runs the automated tests
+python3 -m unittest discover -s tests -v    # runs the automated tests
 bash -n install.sh                         # checks the shell script for syntax errors (doesn't run it)
 ```
 
