@@ -80,7 +80,7 @@ Agreed 2026-10-18: the answers to the nine questions asked before step 5, and de
 | 2 | Generation engine and the remaining packs | Done |
 | 3 | Bind workflow completion to the reviewed content and the gates' results | Done, pull request #1; moving state into the pack home remains |
 | 4 | Remove the remaining prompt-name collisions with qualified names | Done, Proj-Agent_Packs pull request #23; CI now fails on any install collision |
-| 5 | **Orchestration templates, one per client:** how the orchestrator, handoffs, workflows, hooks, agents and skills are expressed in each client's own files, and a template that generates them from the selected packs | In progress: the generator and the Claude Code template are built and verified end to end in the real client; Codex, then Copilot with the VS Code helper extension, next |
+| 5 | **Orchestration templates, one per client:** how the orchestrator, handoffs, workflows, hooks, agents and skills are expressed in each client's own files, and a template that generates them from the selected packs | In progress: the generator and the Claude Code template are built and verified end to end in the real client; the GitHub Copilot and Codex templates are built (2026-10-30); the VS Code helper extension, then Kiro and Antigravity, next |
 | 6 | Local setup: a script pulls the selected packs into the client locations and runs the generator (current success threshold) | After step 5 |
 | 7 | APM pulls the packs and a minimal engine generates the orchestration (100%) | After step 6 |
 | 8 | Verify Kiro and Antigravity, and the Copilot app, in the real clients | With steps 5 and 6; all of them are installed on the reference machine |

@@ -1,4 +1,5 @@
-"""Orchestration generator suite: deterministic output, safe writes, and the Claude Code template."""
+"""Orchestration generator suite: deterministic output, safe writes, and the Claude Code, Codex and
+GitHub Copilot templates."""
 from __future__ import annotations
 
 import hashlib
@@ -17,6 +18,9 @@ ROOT = Path(__file__).resolve().parents[1]
 GENERATOR = ROOT / "orchestration" / "generate.py"
 SKILLS = ROOT / "orchestration" / "skills"
 ORCHESTRATOR = "agentic-orchestrator-anthropic-claude-code"
+COPILOT_ORCHESTRATOR = "agentic-orchestrator-github-copilot"
+CODEX_ORCHESTRATOR = "agentic-orchestrator-openai-codex"
+TEMPLATES = ROOT / "orchestration" / "templates"
 SKILL_NAMES = sorted(p.name for p in SKILLS.iterdir() if p.is_dir())
 PLACEHOLDERS = {"name", "tools", "skills", "controller", "pack_home", "roster"}
 
@@ -86,6 +90,20 @@ class Profile:
             shutil.rmtree(self.base, onexc=unlock_and_retry)
         else:
             shutil.rmtree(self.base, onerror=unlock_and_retry)
+
+    def add_copilot(self):
+        self.copilot = self.home / ".copilot"
+        self.write(self.copilot / "agents" / "gh.agent.md",
+                   "---\nname: github-expert-engineer\ndescription: GitHub platform work\n---\nbody\n")
+        self.write(self.copilot / "agents" / "docs.md", "---\ndescription: Documentation archivist\n---\nbody\n")
+
+    def add_codex(self):
+        self.codex = self.home / ".codex"
+        self.write(self.codex / "agents" / "cost.toml",
+                   'name = "cost-analyzer"\ndescription = "FinOps"\ndeveloper_instructions = """x"""\n')
+
+    def shared_skills(self) -> Path:
+        return self.home / ".agents" / "skills"
 
 
 class GeneratorTests(unittest.TestCase):
@@ -242,6 +260,136 @@ class GeneratorTests(unittest.TestCase):
         self.assertFalse((self.p.pack / ".agentic").exists())
 
 
+class CopilotAndCodexTests(unittest.TestCase):
+    def setUp(self):
+        self.p = Profile()
+        self.p.add_copilot()
+        self.p.add_codex()
+
+    def tearDown(self):
+        self.p.cleanup()
+
+    def assert_shared_skills(self, base: Path):
+        for name in SKILL_NAMES:
+            skill = (base / name / "SKILL.md").read_text(encoding="utf-8")
+            self.assertEqual(frontmatter(skill)["name"], name)
+            self.assertNotIn("{{", skill)
+
+    def test_generates_the_copilot_orchestration(self):
+        result = self.p.generate("--client", "github-copilot")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        agent = (self.p.copilot / "agents" / f"{COPILOT_ORCHESTRATOR}.agent.md").read_text(encoding="utf-8")
+        fields = frontmatter(agent)
+        self.assertEqual(fields["name"], COPILOT_ORCHESTRATOR)
+        self.assertLessEqual(len(fields["description"]), 1024)
+        self.assertEqual(fields["include-custom-instructions"], "true")
+        self.assertEqual(sorted(re.findall(r'"([a-z]+)"', fields["tools"])),
+                         ["agent", "edit", "execute", "read", "search", "todo", "web"])
+        controller = (self.p.pack / "tooling" / "workflow.py").as_posix()
+        self.assertIn(f'"{controller}" discover --client github-copilot', agent)
+        self.assertIn(f'"{controller}" init --client github-copilot', agent)
+        roster = agent.split("## Specialists installed in GitHub Copilot", 1)[1]
+        self.assertEqual(re.findall(r"^- `([^`]+)`", roster, re.M), ["docs", "github-expert-engineer"])
+        instructions = (self.p.copilot / "instructions" / "code-workflow.instructions.md").read_text(encoding="utf-8")
+        self.assertEqual(frontmatter(instructions)["applyTo"], '"**"')
+        self.assertIn(f"copilot --agent {COPILOT_ORCHESTRATOR}", instructions)
+        self.assert_shared_skills(self.p.shared_skills())
+        self.assertFalse((self.p.codex / "agents" / f"{CODEX_ORCHESTRATOR}.toml").exists())
+        self.assertFalse((self.p.claude / "agents" / f"{ORCHESTRATOR}.md").exists())
+
+    def test_copilot_hooks_are_written_but_not_turned_on(self):
+        self.p.generate("--client", "github-copilot")
+        settings = json.loads((self.p.pack / "hooks" / "github-copilot.hooks.json").read_text(encoding="utf-8"))
+        self.assertEqual(settings["version"], 1)
+        self.assertEqual(sorted(settings["hooks"]), ["agentStop", "sessionStart", "subagentStart", "subagentStop"])
+        script = (self.p.pack / "hooks" / "claude_event.py").as_posix()
+        for entries in settings["hooks"].values():
+            self.assertIn(f'"{script}" --event', entries[0]["powershell"])
+            self.assertEqual(entries[0]["bash"], entries[0]["powershell"])
+        self.assertFalse((self.p.copilot / "hooks").exists())
+
+    def test_copilot_home_moves_the_agent_and_its_skills(self):
+        moved = self.p.base / "copilot-elsewhere"
+        shutil.move(str(self.p.copilot), str(moved))
+        self.p.extra_env = {"COPILOT_HOME": str(moved)}
+        result = self.p.generate("--client", "github-copilot")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        agent = (moved / "agents" / f"{COPILOT_ORCHESTRATOR}.agent.md").read_text(encoding="utf-8")
+        self.assertIn("`github-expert-engineer`", agent)
+        self.assert_shared_skills(moved / "skills")
+        self.assertFalse(self.p.shared_skills().exists())
+
+    def test_generates_the_codex_orchestration(self):
+        result = self.p.generate("--client", "codex")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        text = (self.p.codex / "agents" / f"{CODEX_ORCHESTRATOR}.toml").read_text(encoding="utf-8")
+        quotes = "'" * 3
+        self.assertTrue(text.startswith(f'name = "{CODEX_ORCHESTRATOR}"\ndescription = "'), text[:120])
+        self.assertIn(f"\ndeveloper_instructions = {quotes}\n", text)
+        self.assertTrue(text.endswith(f"\n{quotes}\n"))
+        self.assertEqual(text.count(quotes), 2)
+        try:
+            import tomllib
+        except ImportError:  # Python 3.10 and older have no TOML reader; the checks above still apply
+            tomllib = None
+        if tomllib:
+            agent = tomllib.loads(text)
+            self.assertEqual(sorted(agent), ["description", "developer_instructions", "name"])
+            text = agent["developer_instructions"]
+        controller = (self.p.pack / "tooling" / "workflow.py").as_posix()
+        self.assertIn(f'"{controller}" discover --client codex', text)
+        self.assertIn(f'"{controller}" init --client codex', text)
+        roster = text.split("## Specialists installed in OpenAI Codex", 1)[1]
+        self.assertEqual(re.findall(r"^- `([^`]+)`", roster, re.M), ["cost-analyzer"])
+        self.assert_shared_skills(self.p.shared_skills())
+        hooks = json.loads((self.p.pack / "hooks" / "codex.hooks.json").read_text(encoding="utf-8"))
+        self.assertEqual(sorted(hooks["hooks"]), ["SessionStart", "Stop", "SubagentStart", "SubagentStop"])
+        self.assertFalse((self.p.codex / "hooks.json").exists())
+
+    def test_every_detected_client_shares_skills_and_a_second_run_changes_nothing(self):
+        result = self.p.generate()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        for path in (self.p.claude / "agents" / f"{ORCHESTRATOR}.md",
+                     self.p.copilot / "agents" / f"{COPILOT_ORCHESTRATOR}.agent.md",
+                     self.p.codex / "agents" / f"{CODEX_ORCHESTRATOR}.toml"):
+            self.assertTrue(path.is_file(), path)
+        self.assertNotIn("template is not built yet", result.stdout)
+        manifest = self.p.manifest()
+        for key, entry in manifest.items():
+            self.assertEqual(hashlib.sha256(Path(key).read_bytes()).hexdigest(), entry["sha256"], key)
+        shared = self.p.shared_skills().as_posix() + "/"
+        self.assertEqual(sum(1 for key in manifest if key.startswith(shared)),
+                         sum(1 for p in SKILLS.rglob("*") if p.is_file()))
+        before = self.p.snapshot()
+        again = self.p.generate()
+        self.assertEqual(again.returncode, 0, again.stdout + again.stderr)
+        self.assertEqual(self.p.snapshot(), before)
+        for word in ("create", "update", "remove"):
+            self.assertNotIn(word, again.stdout)
+
+    def test_legacy_copilot_agent_is_replaced_only_on_request(self):
+        legacy = self.p.write(self.p.copilot / "agents" / "claude-agentic-orchestrator.agent.md",
+                              "---\nname: claude-agentic-orchestrator\ndescription: old\n---\n")
+        self.assertEqual(self.p.generate("--client", "github-copilot").returncode, 0)
+        self.assertTrue(legacy.is_file())
+        replaced = self.p.generate("--client", "github-copilot", "--replace-legacy")
+        self.assertEqual(replaced.returncode, 0, replaced.stdout + replaced.stderr)
+        self.assertFalse(legacy.exists())
+        backups = [p.name for p in (self.p.pack / "backup").rglob("*") if p.is_file()]
+        self.assertEqual(backups, ["claude-agentic-orchestrator.agent.md"])
+
+    def test_generated_controller_counts_copilot_agents_for_copilot(self):
+        self.p.generate("--client", "github-copilot")
+        repo = self.p.base / "repo"
+        repo.mkdir()
+        self.assertEqual(self.p.controller("--root", str(repo), "registry").returncode, 0)
+        discovery = json.loads(self.p.controller("--root", str(repo), "discover", "--client", "github-copilot").stdout)
+        available = {a["id"]: a["available"] for a in discovery["agents"]}
+        self.assertTrue(available["github-expert-engineer"])
+        self.assertFalse(available["cost-analyzer"])
+        self.assertNotIn(COPILOT_ORCHESTRATOR, available)
+
+
 class TemplateTests(unittest.TestCase):
     def test_skills_are_well_formed_and_use_only_known_placeholders(self):
         self.assertEqual(SKILL_NAMES, sorted([
@@ -255,7 +403,7 @@ class TemplateTests(unittest.TestCase):
             self.assertLessEqual(len(match.group(2)), 1024)
             for link in re.findall(r"\]\((references/[^)]+)\)", text):
                 self.assertTrue((SKILLS / name / link).is_file(), f"{name} links missing {link}")
-        for path in list(SKILLS.rglob("*.md")) + list((ROOT / "orchestration" / "templates").rglob("*.md")):
+        for path in list(SKILLS.rglob("*.md")) + [p for p in TEMPLATES.rglob("*") if p.is_file()]:
             used = set(re.findall(r"\{\{([a-z_]+)\}\}", path.read_text(encoding="utf-8")))
             self.assertLessEqual(used, PLACEHOLDERS, path)
 
@@ -265,14 +413,15 @@ class TemplateTests(unittest.TestCase):
             self.assertIn(f"`{stance}`", reference)
         for rule in ("never the node that built", "A stronger model does not win", "never approves or merges"):
             self.assertIn(rule, reference)
-        for path in list(SKILLS.rglob("*.md")) + list((ROOT / "orchestration" / "templates").rglob("*.md")):
+        for path in list(SKILLS.rglob("*.md")) + [p for p in TEMPLATES.rglob("*") if p.is_file()]:
             text = path.read_text(encoding="utf-8")
             self.assertNotIn("mergeDecision", text, path)
             self.assertNotIn("recommendation: ready", text, path)
-        agent = (ROOT / "orchestration" / "templates" / "claude-code" / "agent.md").read_text(encoding="utf-8")
-        self.assertIn("## Roles, stances and independence", agent)
-        self.assertIn("never reviews its own output", agent)
-        self.assertIn("never say a change is ready to merge", agent)
+        for name in ("claude-code/agent.md", "github-copilot/agent.md", "codex/agent.toml"):
+            agent = (TEMPLATES / name).read_text(encoding="utf-8")
+            self.assertIn("## Roles, stances and independence", agent, name)
+            self.assertIn("never reviews its own output", agent, name)
+            self.assertIn("never say a change is ready to merge", agent, name)
 
     def test_skills_never_tie_the_controller_to_a_repository_copy(self):
         for path in SKILLS.rglob("*.md"):

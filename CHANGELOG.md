@@ -25,6 +25,7 @@ Pre-alpha rebrand as **Code Workflow**, the slim, in-client sibling of Code Cond
 - README, CHANGELOG, LICENSE, and an uninstall section in PLACEMENT.md.
 - `orchestration/generate.py`: generates each client's orchestration in the user profile from templates. The first template is Claude Code: the orchestrator `agentic-orchestrator-anthropic-claude-code` (listing the specialists installed in Claude Code), six client-neutral workflow skills, a short rule, and hook configuration that is written but not turned on. The controller and hook are installed once in `~/.code-workflow/`. The generator is deterministic, records every file it writes with its sha256, never overwrites a file it did not write or that was changed since, and replaces the earlier installer's files only with `--replace-legacy`, after a backup. See `orchestration/README.md`.
 - `discover --client` and `init --client`: an orchestrator counts only the agents its own client can run; the client is recorded in `WORKFLOW.json`.
+- `orchestration/generate.py` now also generates GitHub Copilot's orchestration (`agentic-orchestrator-github-copilot` in `~/.copilot/agents`, for Copilot CLI, the GitHub Copilot app and VS Code, plus `~/.copilot/instructions/code-workflow.instructions.md`) and Codex's (`agentic-orchestrator-openai-codex.toml` in `~/.codex/agents`). Both share the six workflow skills in `~/.agents/skills` and get hook files in the pack home that are written but not turned on. `--client github-copilot` and `--client codex` select them.
 
 ### Changed
 
