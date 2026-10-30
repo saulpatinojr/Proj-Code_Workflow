@@ -28,6 +28,7 @@ Pre-alpha rebrand as **Code Workflow**, the slim, in-client sibling of Code Cond
 
 ### Changed
 
+- APM is now pinned at 0.35.0 (latest stable) instead of 0.33.0, through `Proj-Agent_Packs/tooling/apm-version.txt`; desktop setup installs agent packs with that version. See `docs/setup-design.md`.
 - The audit hook now records only allowlisted event fields: prompts, transcripts, assistant messages, and tool input/output are dropped. It creates `.agentic/.gitignore` so audit logs stay out of git.
 - The handoff parser now reads the full contract (lists of mappings, `not_verified`) instead of line regexes, and status values are validated.
 - The installers are rebranded and offer `doctor` at the end of the guided run.
