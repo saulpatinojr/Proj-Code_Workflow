@@ -51,7 +51,7 @@ cc import .agentic/workflows/<id>/run-manifest.json     # Code Conductor: brings
 
 ## Install into the user profile (in progress)
 
-`orchestration/generate.py` is replacing the per-repository installers. It installs the controller once in `~/.code-workflow/` and generates each client's orchestrator, skills and rule in the user profile, so every repository can use them. Claude Code is built; the other clients follow. See [`orchestration/README.md`](orchestration/README.md).
+`orchestration/generate.py` is replacing the per-repository installers. It installs the controller once in `~/.code-workflow/` and generates each client's orchestrator, skills and rule in the user profile, so every repository can use them. Claude Code, GitHub Copilot (CLI, the Copilot app and VS Code) and Codex are built; Kiro and Antigravity follow. See [`orchestration/README.md`](orchestration/README.md).
 
 ## How a workflow runs
 

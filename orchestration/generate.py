@@ -7,7 +7,7 @@ docs/setup-design.md). Each client gets its own orchestrator, which delegates on
 agents installed in that client (decision 2).
 
   python orchestration/generate.py                       every detected client that has a template
-  python orchestration/generate.py --client claude-code  one client
+  python orchestration/generate.py --client claude-code  one client (claude-code, codex, github-copilot)
   python orchestration/generate.py --dry-run             show what would change; write nothing
   python orchestration/generate.py --replace-legacy      back up, then replace, what the earlier
                                                          per-repository installer put in the profile
@@ -16,10 +16,11 @@ What it writes:
   <pack home>/tooling/workflow.py, hooks/claude_event.py   the controller and hook, once per computer
   <pack home>/hooks/<client>.settings.json                 hook configuration, ready but not turned on
   <client home>/...                                        the orchestrator agent, its skills and a rule
+                                                           (Codex and Copilot share ~/.agents/skills)
   <pack home>/generated.json                               every file written, with its sha256
 
 The pack home is ~/.code-workflow, or CODE_WORKFLOW_HOME. A client's home follows that client's
-own variable (CLAUDE_CONFIG_DIR for Claude Code). The write rules are in safe_files.py; each
+own variable (CLAUDE_CONFIG_DIR, CODEX_HOME, COPILOT_HOME). The write rules are in safe_files.py; each
 client's planner is a module beside this one.
 """
 from __future__ import annotations
@@ -34,15 +35,15 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # sibling modules, also under python -I
 import claude_code  # noqa: E402
+import codex  # noqa: E402
 import common  # noqa: E402
+import github_copilot  # noqa: E402
 import safe_files  # noqa: E402
 
 MANIFEST = "generated.json"
-CLIENTS = {module.CLIENT["id"]: module for module in (claude_code,)}
+CLIENTS = {module.CLIENT["id"]: module for module in (claude_code, codex, github_copilot)}
 # Clients that are detected and reported, but have no template yet: (label, home variable, default home).
 PLANNED = {
-    "codex": ("OpenAI Codex", "CODEX_HOME", ".codex"),
-    "github-copilot": ("GitHub Copilot", "COPILOT_HOME", ".copilot"),
     "kiro": ("Kiro", "KIRO_HOME", ".kiro"),
     "antigravity": ("Google Antigravity", None, ".gemini/config"),
 }
@@ -140,7 +141,8 @@ def main() -> int:
     clients = args.client or [c for c in sorted(CLIENTS) if client_home(c).is_dir()]
     report_untemplated_clients()
     if not clients:
-        print("No client with a template was found. Install Claude Code, or name a client with --client.")
+        print("No client with a template was found. Install Claude Code, Codex or GitHub Copilot, "
+              "or name a client with --client.")
         return 1
 
     pack_actions, pack_conflicts = safe_files.decide(plan_pack(pack), "pack", manifest, [], False)
