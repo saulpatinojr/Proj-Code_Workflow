@@ -2,6 +2,30 @@
 
 Notes carried from one working session to the next. Newest first.
 
+## 2026-11-01, for the next session
+
+**Draw.io diagram packs: reviewed, fixed, waiting for you.**
+
+- Three live generation tests ran in Claude Code (`aws-expert-designer`, `azure-expert-designer`, `google-cloud-architect`), each passing the strict checker and a visual check of its render. Two independent reviews and a pre-PR review followed.
+- The shared skills' facts held against draw.io 32.6.9 and the official AWS, Microsoft and Google icon pages. The packs' own content did not: hand-typed AWS boundary colours, pack validators that passed legacy and misspelled icons, and a checker that passed icons drawn without their palette colour.
+- The fixes are one draft pull request in Proj-Agent_Packs (AWS and Azure packs 1.5.0, Google Cloud 1.3.0). Merging it and creating the five release tags are yours; then `apm install -g` updates every client.
+
+**What changed on this computer**
+
+- `orchestration/generate.py` ran for real: the Claude Code orchestrator lists all 39 specialists again (it had 24), and the Codex and Copilot orchestrators now exist. A second run changes nothing.
+- No pack was reinstalled: the installed copies already match their releases in Claude Code, Codex, Copilot and Kiro.
+
+**Decisions waiting for you**
+
+1. Antigravity: APM cannot install packs there at user scope. Leave it, or build it into the local setup script (plan step 6).
+2. VS Code's Copilot chat shows the agents only with `github.copilot.chat.cli.customAgents.enabled` on; it is off.
+3. APM 0.35.0: the Proj-Agent_Packs pin change never landed (issue #29 there).
+4. `ml-data/` (git-ignored) holds the session's agent runs for evaluation; part of it is client-confidential. A local commit guard is ready in `ml-data/tools/client-data-guard`; installing it as a git hook needs you.
+
+**Kept on purpose**
+
+- The Proj-Agent_Packs worktrees `Proj-Agent_Packs-wt-*` and their local branches, until the pull request merges.
+
 ## 2026-10-18, for the next session
 
 Status at the end of the session: pull requests #4 and #5 are merged into main, and the local repository is in sync with GitHub.

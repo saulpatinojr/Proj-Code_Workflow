@@ -3,3 +3,6 @@ __pycache__/
 .agentic/
 *.zip
 .DS_Store
+
+# Local agent-run data for evaluation and training; never committed (contains client-confidential data)
+ml-data/
