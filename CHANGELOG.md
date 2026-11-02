@@ -29,8 +29,8 @@ Pre-alpha rebrand as **Code Workflow**, the slim, in-client sibling of Code Cond
 
 ### Changed
 
-- APM 0.35.0 (latest stable) is the version for desktop setup instead of 0.33.0. `Proj-Agent_Packs/tooling/apm-version.txt` pins it since 2026-11-02 (that repository's pull request #31), so packs are validated and installed with 0.35.0. See `docs/setup-design.md`.
-- `.gitignore` ignores `ml-data/`, a local folder for agent-run data kept for evaluation and training. It may hold client-confidential data and is never committed.
+- APM 0.35.0 (latest stable) is the version for desktop setup instead of 0.33.0. `Proj-Agent_Packs/tooling/apm-version.txt` pins it since 2026-11-02 ([that repository's pull request #31](https://github.com/saulpatinojr/Proj-Agent_Packs/pull/31)), so packs are validated and installed with 0.35.0. See `docs/setup-design.md`.
+- `.gitignore` ignores `ml-data/`, a local folder for agent-run data that is never committed.
 - The audit hook now records only allowlisted event fields: prompts, transcripts, assistant messages, and tool input/output are dropped. It creates `.agentic/.gitignore` so audit logs stay out of git.
 - The handoff parser now reads the full contract (lists of mappings, `not_verified`) instead of line regexes, and status values are validated.
 - The installers are rebranded and offer `doctor` at the end of the guided run.

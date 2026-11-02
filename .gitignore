@@ -4,5 +4,5 @@ __pycache__/
 *.zip
 .DS_Store
 
-# Local agent-run data for evaluation and training; never committed (contains client-confidential data)
+# Local agent-run data; never committed
 ml-data/

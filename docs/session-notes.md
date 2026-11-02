@@ -6,9 +6,13 @@ Notes carried from one working session to the next. Newest first.
 
 **Draw.io packs: released and installed.**
 
-- Proj-Agent_Packs pull request #30 is merged. The releases `aws-cloud-architect-v1.5.0`, `aws-expert-designer-v1.5.0`, `azure-cloud-architect-v1.5.0`, `azure-expert-designer-v1.5.0` and `google-cloud-architect-v1.3.0` are published.
-- APM 0.35.0 is pinned in Proj-Agent_Packs (pull request #31, closes issue #29) and installed on this computer. The 0.33.0 copy is kept in APM's `releases` folder for a rollback.
-- `apm install -g` put the releases into Claude Code, Codex, Copilot and Kiro. It took three runs (see the progress log in `setup-design.md`). The result is verified: every deployed file is present, and the five packs' skills match their source.
+- [Proj-Agent_Packs pull request #30](https://github.com/saulpatinojr/Proj-Agent_Packs/pull/30) is merged. The [releases](https://github.com/saulpatinojr/Proj-Agent_Packs/releases) `aws-cloud-architect-v1.5.0`, `aws-expert-designer-v1.5.0`, `azure-cloud-architect-v1.5.0`, `azure-expert-designer-v1.5.0` and `google-cloud-architect-v1.3.0` are published.
+- APM 0.35.0 is pinned in Proj-Agent_Packs and installed on this computer:
+  - The pin is [pull request #31](https://github.com/saulpatinojr/Proj-Agent_Packs/pull/31), which closed [issue #29](https://github.com/saulpatinojr/Proj-Agent_Packs/issues/29).
+  - The 0.33.0 copy is kept in APM's `releases` folder for a rollback.
+- `apm install -g` put the releases into Claude Code, Codex, Copilot and Kiro. It took three runs; the progress log in `setup-design.md` explains why. Verified afterwards:
+  - Every file APM's lock file records is present.
+  - The five packs' skills match their source.
 
 **Cleaned up**
 
@@ -20,8 +24,11 @@ This closes the 2026-11-01 decisions 3 (the APM pin) and 4 (`ml-data/`), and tha
 
 **Decisions waiting for you**
 
-1. Proj-Agent_Packs pull request #32 (draft) fixes the publish workflow. It now fails on every run, because it mirrored lightweight copies of two release tags. Merge it, and replace those two tags on the mirror once (the command is in the pull request).
-2. Code Conductor still pins APM 0.33.0 (its decision D-077). Moving it to 0.35.0 means re-materializing its lock file and running `apm audit`, in a pull request there.
+1. **The publish workflow fails on every run** until two release tags on the mirror are replaced once. The command is in [pull request #33](https://github.com/saulpatinojr/Proj-Agent_Packs/pull/33).
+   - The cause: the workflow copied those two tags to the mirror as lightweight tags (bare pointers to the commit), and the mirror now refuses the real ones.
+   - [Pull request #32](https://github.com/saulpatinojr/Proj-Agent_Packs/pull/32) (merged) stops new copies going wrong.
+   - #33 (draft) fixes the cause, `actions/checkout` before v6.0.2. Review it. If you accept it, replace the two tags first, then merge.
+2. **Code Conductor still pins APM 0.33.0.** Its decision D-077 says both repositories use the same version, so it is out of step until a pull request there moves it. That pull request regenerates Code Conductor's committed APM files and runs `apm audit`, APM's own consistency check.
 3. Unchanged from 2026-11-01:
    - Antigravity.
    - The Copilot `customAgents` setting.
@@ -45,7 +52,7 @@ This closes the 2026-11-01 decisions 3 (the APM pin) and 4 (`ml-data/`), and tha
 1. Antigravity: APM cannot install packs there at user scope. Leave it, or build it into the local setup script (plan step 6).
 2. VS Code's Copilot chat shows the agents only with `github.copilot.chat.cli.customAgents.enabled` on; it is off.
 3. APM 0.35.0: the Proj-Agent_Packs pin change never landed (issue #29 there).
-4. `ml-data/` (git-ignored) holds the session's agent runs for evaluation; part of it is client-confidential. A local commit guard is ready in `ml-data/tools/client-data-guard`; installing it as a git hook needs you.
+4. `ml-data/` (git-ignored) holds the session's agent runs for evaluation; it is never committed. A local commit guard is ready in `ml-data/tools/client-data-guard`; installing it as a git hook needs you.
 
 **Code Workflow gaps this session exposed (not fixed yet)**
 
