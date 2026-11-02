@@ -2,6 +2,31 @@
 
 Notes carried from one working session to the next. Newest first.
 
+## 2026-11-02, for the next session
+
+**Draw.io packs: released and installed.**
+
+- Proj-Agent_Packs pull request #30 is merged. The releases `aws-cloud-architect-v1.5.0`, `aws-expert-designer-v1.5.0`, `azure-cloud-architect-v1.5.0`, `azure-expert-designer-v1.5.0` and `google-cloud-architect-v1.3.0` are published.
+- APM 0.35.0 is pinned in Proj-Agent_Packs (pull request #31, closes issue #29) and installed on this computer. The 0.33.0 copy is kept in APM's `releases` folder for a rollback.
+- `apm install -g` put the releases into Claude Code, Codex, Copilot and Kiro. It took three runs (see the progress log in `setup-design.md`). The result is verified: every deployed file is present, and the five packs' skills match their source.
+
+**Cleaned up**
+
+- The seven Proj-Agent_Packs worktrees, and the 15 local branches whose work is in `main` (12 there, 3 here).
+- The `__pycache__` folders left by test runs.
+- The client workflow records and `ml-data/`, which you removed. The local commit guard went with `ml-data/`; `.gitignore` still ignores the folder.
+
+This closes the 2026-11-01 decisions 3 (the APM pin) and 4 (`ml-data/`), and that day's "kept on purpose" list.
+
+**Decisions waiting for you**
+
+1. Proj-Agent_Packs pull request #32 (draft) fixes the publish workflow. It now fails on every run, because it mirrored lightweight copies of two release tags. Merge it, and replace those two tags on the mirror once (the command is in the pull request).
+2. Code Conductor still pins APM 0.33.0 (its decision D-077). Moving it to 0.35.0 means re-materializing its lock file and running `apm audit`, in a pull request there.
+3. Unchanged from 2026-11-01:
+   - Antigravity.
+   - The Copilot `customAgents` setting.
+   - The four Code Workflow handoff gaps.
+
 ## 2026-11-01, for the next session
 
 **Draw.io diagram packs: reviewed, fixed, waiting for you.**
