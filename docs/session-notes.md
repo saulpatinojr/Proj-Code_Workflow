@@ -22,6 +22,14 @@ Notes carried from one working session to the next. Newest first.
 3. APM 0.35.0: the Proj-Agent_Packs pin change never landed (issue #29 there).
 4. `ml-data/` (git-ignored) holds the session's agent runs for evaluation; part of it is client-confidential. A local commit guard is ready in `ml-data/tools/client-data-guard`; installing it as a git hook needs you.
 
+**Code Workflow gaps this session exposed (not fixed yet)**
+
+Four workflows recorded the work with 18 specialist handoffs. Valid work showed as `blocked` until the agents corrected their records, for three reasons the controller and the handoff skill should handle:
+
+1. **Status words.** Agents wrote their pack's completion word (`COMPLETE_VERIFIED`, `IMPLEMENTATION_PREPARED_NOT_VERIFIED`) into `status`, which accepts only `completed`, `partial`, `blocked`, `failed_retryable` or `failed_terminal`. The handoff skill should say so, and the agents now record the pack word in a separate `contract_status` field.
+2. **Evidence outside the workflow root.** When the workflow runs in one repository and changes another (here Code Workflow and Proj-Agent_Packs), agents cite worktree or scratchpad paths, which the controller rightly rejects. The skill should tell agents to copy evidence into the workflow's `artifacts/` folder.
+3. **YAML block text.** The handoff parser does not read folded or literal block scalars (`>-`, `|`); it stores the literal `>-` as the summary, without an error. Eight handoffs used them. The fix is in the parser, with a test, not in the agents.
+
 **Kept on purpose**
 
 - The Proj-Agent_Packs worktrees `Proj-Agent_Packs-wt-*` and their local branches, until the pull request merges.
