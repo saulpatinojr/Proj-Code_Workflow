@@ -22,14 +22,22 @@ Notes carried from one working session to the next. Newest first.
 
 This closes the 2026-11-01 decisions 3 (the APM pin) and 4 (`ml-data/`), and that day's "kept on purpose" list.
 
+**Release pipeline repaired**
+
+- **What went wrong:** the publish workflow had copied two release tags to the mirror as lightweight tags (bare pointers to the commit). The mirror then refused the real ones, so every publish run failed.
+- **The fix:**
+  - [Pull request #32](https://github.com/saulpatinojr/Proj-Agent_Packs/pull/32) fetches the real tags.
+  - [Pull request #33](https://github.com/saulpatinojr/Proj-Agent_Packs/pull/33) moves every workflow to `actions/checkout` v7.0.1, which keeps tags annotated.
+  - Both are merged.
+- **The mirror:** with your approval, Claude replaced the two mirror tags once. All 25 tags now match.
+- **Proof:** a [publish run](https://github.com/saulpatinojr/Proj-Agent_Packs/actions/runs/41525358873) on `main` passes again.
+
 **Decisions waiting for you**
 
-1. **The publish workflow fails on every run** until two release tags on the mirror are replaced once. The command is in [pull request #33](https://github.com/saulpatinojr/Proj-Agent_Packs/pull/33).
-   - The cause: the workflow copied those two tags to the mirror as lightweight tags (bare pointers to the commit), and the mirror now refuses the real ones.
-   - [Pull request #32](https://github.com/saulpatinojr/Proj-Agent_Packs/pull/32) (merged) stops new copies going wrong.
-   - #33 (draft) fixes the cause, `actions/checkout` before v6.0.2. Review it. If you accept it, replace the two tags first, then merge.
+1. **Vendor documentation changed.** [Issue #11](https://github.com/saulpatinojr/Proj-Code_Workflow/issues/11): the weekly watch found that facts in `docs/client-locations.md` need re-checking.
 2. **Code Conductor still pins APM 0.33.0.** Its decision D-077 says both repositories use the same version, so it is out of step until a pull request there moves it. That pull request regenerates Code Conductor's committed APM files and runs `apm audit`, APM's own consistency check.
-3. Unchanged from 2026-11-01:
+3. **This repository's workflows still use `actions/checkout@v4` and `actions/setup-python@v5`.** GitHub now runs those on Node.js 24 and warns that the Node.js 20 they target is deprecated. Agent Packs moved to checkout v7.0.1, pinned by commit SHA.
+4. Unchanged from 2026-11-01:
    - Antigravity.
    - The Copilot `customAgents` setting.
    - The four Code Workflow handoff gaps.
