@@ -29,6 +29,7 @@ Four workflows recorded the work with 18 specialist handoffs. Valid work showed 
 1. **Status words.** Agents wrote their pack's completion word (`COMPLETE_VERIFIED`, `IMPLEMENTATION_PREPARED_NOT_VERIFIED`) into `status`, which accepts only `completed`, `partial`, `blocked`, `failed_retryable` or `failed_terminal`. The handoff skill should say so, and the agents now record the pack word in a separate `contract_status` field.
 2. **Evidence outside the workflow root.** When the workflow runs in one repository and changes another (here Code Workflow and Proj-Agent_Packs), agents cite worktree or scratchpad paths, which the controller rightly rejects. The skill should tell agents to copy evidence into the workflow's `artifacts/` folder.
 3. **YAML block text.** The handoff parser does not read folded or literal block scalars (`>-`, `|`); it stores the literal `>-` as the summary, without an error. Eight handoffs used them. The fix is in the parser, with a test, not in the agents.
+4. **Which folder paths are relative to.** Evidence paths must be relative to the repository root (`.agentic/workflows/<id>/artifacts/...`). Agents told "relative to the workflow root" wrote paths relative to the workflow folder (`artifacts/...`), and the controller found none of their files. The skill should name the base with an example, or the controller should also try the workflow folder.
 
 **Kept on purpose**
 
