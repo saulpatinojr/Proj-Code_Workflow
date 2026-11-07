@@ -41,6 +41,7 @@ Pre-alpha rebrand as **Code Workflow**, the slim, in-client sibling of Code Cond
 
 ### Fixed
 
+- Vendor facts re-verified on 2026-11-07 (issue #11): 40 of 40 now confirmed by `.github/scripts/check_vendor_facts.py`. Three only changed wording or page (GitHub Actions billing, VS Code prompt files, VS Code's `~/.copilot/agents`, now on the custom agent file reference). Antigravity withdrew the 2026-10-19 end date for workflows (deprecated, current ones keep working), so `docs/client-locations.md` and `docs/setup-design.md` say so. No GitHub page now states that the Copilot app reads `~/.copilot/agents`; that row is marked unverified and its fact removed.
 - The registry reads agent descriptions that wrap over several lines in the file header, and trims long ones at a word boundary instead of mid-word.
 - `install.ps1` writes `settings.json` without a byte-order mark. Both installers leave `settings.json` untouched when every hook entry is already present.
 - Both installers keep the first `settings.json.backup-orchestrator`, so a re-run no longer replaces the backup of your original settings.

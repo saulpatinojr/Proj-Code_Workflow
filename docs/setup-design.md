@@ -59,7 +59,7 @@ Agreed 2026-10-18: the answers to the nine questions asked before step 5, and de
 ### What the location check means for the templates
 
 - **One orchestrator per engine.** Surfaces that share an engine share its folder, so `agentic-orchestrator-github-copilot` serves Copilot in VS Code, Copilot CLI and the Copilot app, and the Antigravity one serves its IDE, App and CLI.
-- **Workflow steps are skills.** A skill is the one form every client runs as a slash command. Antigravity's legacy workflows stop working on 2026-10-19, Codex custom prompts are deprecated, and VS Code prompt files run only in the harness being retired.
+- **Workflow steps are skills.** A skill is the one form every client runs as a slash command. Antigravity's workflows are deprecated (current ones keep working for now), Codex custom prompts are deprecated, and VS Code prompt files run only in the harness being retired.
 - **Skills go to each client.** `~/.agents/skills` reaches only Codex and Copilot; Claude Code, Kiro and Antigravity each need their own copy.
 - **Antigravity IDE has no documented custom agents yet.** Its App and CLI read `~/.gemini/config/agents/`; until the IDE does, the IDE gets the rules-and-skills fallback of decision 6.
 - **VS Code's Copilot harness**, now becoming the default, reads `~/.copilot/agents` only when `github.copilot.chat.cli.customAgents.enabled` is on, and it defaults to off.

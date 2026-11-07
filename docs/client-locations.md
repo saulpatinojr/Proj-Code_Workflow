@@ -21,7 +21,7 @@ Several surfaces run the same engine and therefore read the same home folder.
 | Codex CLI, ChatGPT desktop app (Codex view) | Codex | `~/.codex`, plus `~/.agents/skills` | The standalone Codex app merged into the ChatGPT desktop app on 2026-07-09. |
 | Copilot CLI, GitHub Copilot app | Copilot CLI; the app is built on it | `~/.copilot`, plus `~/.agents/skills` | The app has been generally available since 2026-06-17 on Windows, macOS and Linux. |
 | Kiro IDE, Kiro CLI | One agent harness shared by both | `~/.kiro` | CLI V3 is opt-in (`kiro-cli --v3`) until CLI 3.0, due at the end of October 2026. |
-| Google Antigravity IDE, App and CLI | Antigravity | `~/.gemini/config`, plus a data folder per surface: `~/.gemini/antigravity-ide`, `~/.gemini/antigravity`, `~/.gemini/antigravity-cli` | Legacy workflows stop working on 2026-10-19. |
+| Google Antigravity IDE, App and CLI | Antigravity | `~/.gemini/config`, plus a data folder per surface: `~/.gemini/antigravity-ide`, `~/.gemini/antigravity`, `~/.gemini/antigravity-cli` | Workflows are deprecated; current ones keep working for now (2026-11-07; the 2026-10-19 end date is gone from the page). |
 
 **Model engines.** Kiro's default is **Auto**, Kiro's model router, which sends each request to frontier models from Anthropic and OpenAI or to open-weight models; the docs refer to Amazon Bedrock for how requests are routed. Amazon Nova is not among Kiro's documented models. Kiro users can pick a model in the chat, and a custom agent can set `model`. An Antigravity agent's `model` is a tier, `inherit`, `flash` or `pro`, not a model name.
 
@@ -45,7 +45,7 @@ Several surfaces run the same engine and therefore read the same home folder.
 | Claude Code: CLI, VS Code extension, desktop app, VS Code Claude harness | `~/.claude/agents/`, subfolders included | `.claude/agents/` in every folder from the working directory up to the repository root; the closest wins | Markdown with YAML frontmatter. `name` and `description` are required. | Order on a name clash: managed, `--agents` flag, project, user, plugin. A file missing either field, or with YAML that does not parse, is skipped silently. |
 | Codex: CLI, VS Code extension, ChatGPT desktop app | `~/.codex/agents/*.toml` | `.codex/agents/*.toml` | TOML. `name`, `description` and `developer_instructions` are required. | Markdown agents are not read. An agent file cannot set `sandbox_mode`, `approval_policy`, `model_provider` or `mcp_servers`. |
 | Copilot CLI | `~/.copilot/agents/`, as `.agent.md` or `.md` | `.github/agents/`, then `.claude/agents/`, each from the working directory up to the git root | Markdown with frontmatter. `description` is required. | Personal agents win a name clash. `~/.claude/agents` is not read. |
-| GitHub Copilot app | Not stated on the app's own pages. GitHub's custom-agents page says agents in `~/.copilot/agents/` become available to the app. | `.github/agents/` | As Copilot CLI | Chosen with the agent picker or `/agent`. |
+| GitHub Copilot app | Not stated on any GitHub page as of 2026-11-07: the custom-agents page that said agents in `~/.copilot/agents/` reach the app was rewritten without it. The app is built on Copilot CLI, whose page lists `~/.copilot/agents/`; unverified for the app itself. | `.github/agents/` | As Copilot CLI | Chosen with the agent picker or `/agent`. |
 | VS Code, Copilot harness | `~/.copilot/agents` | `.github/agents` | `.agent.md` | Read only when `github.copilot.chat.cli.customAgents.enabled` is on, and it defaults to off. |
 | VS Code, Local harness | VS Code profile storage | `.github/agents` | `.agent.md` | The `chat.agentFilesLocations` setting applies to this harness only and is deprecated. |
 | Kiro IDE and CLI | `~/.kiro/agents/<name>.md` or `.json` | `.kiro/agents/`, loaded only in a trusted workspace | Markdown with frontmatter, the body being the prompt, or JSON. No field is required; `name` defaults to the file name. | The workspace agent wins a name clash. CLI V2 reads JSON only. The IDE ignores an agent's `hooks` field. |
@@ -103,7 +103,7 @@ A skill is the one form that every client runs as a slash command. The older for
 - **Copilot CLI:** no prompt files; each skill runs as `/name`, and a repository's `.claude/commands/` is read.
 - **VS Code:** `.prompt.md` files run only in the Local harness; the Copilot harness uses skills.
 - **Kiro:** each skill runs as `/name`, and so does a `manual` steering file. Saved workflows (JSON or YAML recipes) live in `~/.kiro/workflows/` and `.kiro/workflows/`.
-- **Antigravity:** workflows in `~/.gemini/config/workflows/` and `.agents/workflows/` stop working on 2026-10-19; `/migrate-workflows` in the App converts them to skills. A replacement workflows system is announced but not documented.
+- **Antigravity:** workflows in `~/.gemini/config/workflows/` and `.agents/workflows/` are deprecated but keep working for now (the 2026-10-19 end date was withdrawn by 2026-11-07); `/migrate-workflows` in the App converts them to skills. A replacement workflows system is announced but not documented.
 
 ## Delegation to subagents
 
