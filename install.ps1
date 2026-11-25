@@ -272,6 +272,12 @@ if ($VerifyMode) {
     Get-ChildItem $repoPayload -Directory | Where-Object { $_.Name -notin @('.claude', '.codex', '.github') } | ForEach-Object {
         Copy-Tree $_.FullName (Join-Path $RepoPath $_.Name) -KeepExisting @('agent-registry.yml')
     }
+    if ($DoClaude) {
+        foreach ($sub in @('agents', 'skills')) {
+            $src = Join-Path $repoPayload (Join-Path '.claude' $sub)
+            if (Test-Path $src) { Copy-Tree $src (Join-Path $RepoPath (Join-Path '.claude' $sub)) }
+        }
+    }
     if ($DoCodex)   { Copy-Tree (Join-Path $repoPayload '.codex')  (Join-Path $RepoPath '.codex') }
     if ($DoCopilot) { Copy-Tree (Join-Path $repoPayload '.github') (Join-Path $RepoPath '.github') }
 }

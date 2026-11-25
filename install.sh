@@ -128,6 +128,11 @@ if [ "$VERIFY_MODE" = 1 ]; then
 else
   copy_tree "$PACK_ROOT/repo-root/hooks" "$REPO/hooks"
   copy_tree "$PACK_ROOT/repo-root/tooling" "$REPO/tooling" "agent-registry.yml"
+  if [ "$CLA" = y ]; then
+    for sub in agents skills; do
+      [ -d "$PACK_ROOT/repo-root/.claude/$sub" ] && { mkdir -p "$REPO/.claude/$sub"; copy_tree "$PACK_ROOT/repo-root/.claude/$sub" "$REPO/.claude/$sub"; }
+    done
+  fi
   if [ "$COD" = y ]; then mkdir -p "$REPO/.codex"; copy_tree "$PACK_ROOT/repo-root/.codex" "$REPO/.codex"; fi
   if [ "$COP" = y ]; then mkdir -p "$REPO/.github/hooks"; copy_tree "$PACK_ROOT/repo-root/.github" "$REPO/.github"; fi
 fi
