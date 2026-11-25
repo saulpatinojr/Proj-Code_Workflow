@@ -22,6 +22,8 @@ Proj-Code_Workflow\  (repository root = the pack)
 │
 └── repo-root\           ==> <your-repository>\
     ├── .claude\settings.agentic-orchestrator.json     <- merged into .claude\settings.json
+    ├── .claude\agents\steward.md + babysit.md        <- repo-scope specialist agents (Claude Code)
+    ├── .claude\skills\steward\ + babysit\            <- their skills (steward has 3 mode references)
     ├── .codex\hooks.sample.json                       <- rename to hooks.json, then trust via /hooks in Codex
     ├── .github\hooks\agentic-orchestrator.sample.json <- Copilot CLI hooks; rename after review
     ├── AGENTS-orchestrator.md                         <- appended into AGENTS.md (marker-guarded)
@@ -53,6 +55,7 @@ Each registry entry records which clients carry the agent, so a mixed estate —
 | The 6 skills | `~/.claude/skills/` | `~/.agents/skills/` (shared standard) | same `~/.agents/skills/` copy; VS Code also reads `~/.claude/skills/` |
 | Repo instructions | agent picks them up | `AGENTS.md` section | `AGENTS.md` section |
 | Hooks (audit + stop guard) | `.claude/settings.json` merge | `.codex/hooks.json` (from sample; must be trusted via `/hooks`) | CLI: `.github/hooks/*.json` (from sample). VS Code: reads the Claude settings hooks **only when `chat.useClaudeHooks` is enabled** (off by default) |
+| Steward + babysit agents and skills | `<repo>/.claude/agents/`, `<repo>/.claude/skills/` | not installed | VS Code reads `.claude/skills/`; agents not installed |
 | Workflow state + tooling | `<repo>/tooling/`, `<repo>/.agentic/` | same | same |
 
 ## Windows vs macOS commands
@@ -102,6 +105,7 @@ Custom gates go in `tooling/gates.json`, for example: `{"disable": ["node"], "pr
 Remove `claude-agentic-orchestrator.*` from `~/.claude/agents`, `~/.codex/agents`, and `~/.copilot/agents`, and the six skill folders from `~/.claude/skills` and `~/.agents/skills`. In the repository:
 
 - delete `tooling\` and `hooks\`;
+- delete `.claude\agents\steward.md`, `.claude\agents\babysit.md`, `.claude\skills\steward\` and `.claude\skills\babysit\`;
 - remove the four `claude_event.py` entries from `.claude/settings.json`; the backup taken before the first install is in `settings.json.backup-orchestrator`;
 - delete the marked `BEGIN/END claude-agentic-orchestrator` block from `AGENTS.md`.
 

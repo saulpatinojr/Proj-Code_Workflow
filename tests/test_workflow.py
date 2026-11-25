@@ -510,6 +510,32 @@ class PackTests(unittest.TestCase):
             for link in re.findall(r"\]\((references/[^)]+)\)", text):
                 self.assertTrue((skills / name / link).is_file(), f"{name} links missing {link}")
 
+    def test_repo_scope_specialists_are_well_formed_and_bounded(self):
+        skills = PAYLOAD / ".claude" / "skills"
+        agents = PAYLOAD / ".claude" / "agents"
+        for name in ("steward", "babysit"):
+            skill = (skills / name / "SKILL.md").read_text(encoding="utf-8")
+            match = re.match(r"\A---\nname: ([a-z0-9-]+)\ndescription: (.+?)\n---\n", skill)
+            self.assertIsNotNone(match, name)
+            self.assertEqual(match.group(1), name)
+            self.assertLessEqual(len(match.group(2)), 1024)
+            for link in re.findall(r"\]\((references/[^)]+)\)", skill):
+                self.assertTrue((skills / name / link).is_file(), f"{name} links missing {link}")
+            agent = (agents / f"{name}.md").read_text(encoding="utf-8")
+            self.assertRegex(agent, rf"\A---\nname: {name}\n")
+            self.assertIn(f"  - {name}\n", agent)
+            self.assertIn("never say a change is ready to merge", agent)
+            for text in (skill, agent):
+                self.assertNotIn("recommendation: ready", text)
+                self.assertNotIn("gh pr merge", text)
+                self.assertNotIn("worktree", text)
+
+    def test_installers_copy_repo_scope_claude_folders(self):
+        sh = (ROOT / "install.sh").read_text(encoding="utf-8")
+        ps1 = (ROOT / "install.ps1").read_text(encoding="utf-8")
+        self.assertIn('repo-root/.claude/$sub', sh)
+        self.assertIn("foreach ($sub in @('agents', 'skills'))", ps1)
+
     def test_client_agents_share_one_contract(self):
         claude = (ROOT / "user-claude/agents/claude-agentic-orchestrator.md").read_text(encoding="utf-8")
         codex = (ROOT / "user-codex/agents/claude-agentic-orchestrator.toml").read_text(encoding="utf-8")
